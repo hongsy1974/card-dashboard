@@ -1,0 +1,15 @@
+rules_version = '2';
+
+// Open read/write rules for an internal, no-auth tool.
+// Anyone with your Firebase project config (which is not secret, but is
+// discoverable by anyone using the app) can read and write all data.
+// Suitable only for a trusted internal tool. Publish via:
+//   Firebase Console -> Firestore Database -> Rules, or
+//   firebase deploy --only firestore:rules  (with the Firebase CLI)
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}
