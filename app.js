@@ -74,6 +74,17 @@ function esc(v) {
 }
 function newId() { return Math.random().toString(36).slice(2, 10) + Date.now().toString(36); }
 
+const BENEFIT_TYPES = [
+  { key: 'discount', label: '할인율' },
+  { key: 'point', label: '적립률' },
+];
+function benefitTypeLabel(key) { return (BENEFIT_TYPES.find(t => t.key === key) || BENEFIT_TYPES[0]).label; }
+function benefitLabel(b) {
+  const rate = b.rate === '' || b.rate == null ? null : Number(b.rate);
+  const rateText = rate != null && !Number.isNaN(rate) ? rate + '% ' + benefitTypeLabel(b.benefitType) : benefitTypeLabel(b.benefitType);
+  return b.matchKeyword ? (b.matchKeyword + ' ' + rateText) : rateText;
+}
+
 /* ===================== state ===================== */
 const state = {
   screen: 'dashboard',
@@ -169,7 +180,7 @@ function updateBenefits(id, benefits) {
 function addBenefit() {
   const card = findCard(state.settingsCardId);
   if (!card) return;
-  const benefits = [...(card.benefits || []), { id: 'b' + newId(), place: '', desc: '', got: '0원', inc: true }];
+  const benefits = [...(card.benefits || []), { id: 'b' + newId(), place: '', benefitType: 'discount', rate: '', matchKeyword: '', got: '0원', inc: true }];
   updateBenefits(card.id, benefits);
 }
 function removeBenefit(bid) {
@@ -437,7 +448,7 @@ function renderDashboardScreen() {
   const cardsHtml = cardsView.map(c => {
     const benefitsBlock = c.hasBenefits
       ? '<div class="benefit-list">' + c.benefitList.map(b =>
-          '<div class="benefit-row"><span class="benefit-dot"></span><span class="benefit-desc">' + esc(b.desc) + '</span><span class="benefit-got">' + esc(b.got) + '</span></div>'
+          '<div class="benefit-row"><span class="benefit-dot"></span><span class="benefit-desc">' + esc(benefitLabel(b)) + '</span><span class="benefit-got">' + esc(b.got) + '</span></div>'
         ).join('') + '</div>'
       : '<div class="benefit-empty">아직 획득한 혜택이 없어요 · 기준 달성 시 적용됩니다</div>';
 
@@ -734,10 +745,14 @@ function renderSettingsScreen() {
     '</div>';
 
   const benefitsHtml = (setCard.benefits || []).map(b => {
+    const benefitType = b.benefitType || 'discount';
+    const typeOptsHtml = BENEFIT_TYPES.map(t => '<option value="' + t.key + '"' + (t.key === benefitType ? ' selected' : '') + '>' + t.label + '</option>').join('');
     return (
       '<div class="benefit-editor-row">' +
         '<input class="benefit-input place" type="text" placeholder="혜택처" data-field="settings-benefit-place-' + b.id + '" data-action="settings-benefit-place" data-benefit-id="' + b.id + '" value="' + esc(b.place) + '" />' +
-        '<input class="benefit-input desc" type="text" placeholder="혜택 내용 · 매칭 조건" data-field="settings-benefit-desc-' + b.id + '" data-action="settings-benefit-desc" data-benefit-id="' + b.id + '" value="' + esc(b.desc) + '" />' +
+        '<select class="benefit-type-select" data-action="settings-benefit-type" data-benefit-id="' + b.id + '">' + typeOptsHtml + '</select>' +
+        '<div class="benefit-rate-field"><input type="text" inputmode="decimal" placeholder="0" data-field="settings-benefit-rate-' + b.id + '" data-action="settings-benefit-rate" data-benefit-id="' + b.id + '" value="' + esc(b.rate == null ? '' : b.rate) + '" /><span class="unit">%</span></div>' +
+        '<input class="benefit-input keyword" type="text" placeholder="매칭 조건 (예: 스타벅스)" data-field="settings-benefit-keyword-' + b.id + '" data-action="settings-benefit-keyword" data-benefit-id="' + b.id + '" value="' + esc(b.matchKeyword) + '" />' +
         '<button class="inc-toggle-btn' + (b.inc ? ' on' : '') + '" data-action="settings-benefit-toggle" data-benefit-id="' + b.id + '">' +
           '<span class="mini-switch' + (b.inc ? ' on' : '') + '"><span class="mini-switch-knob" style="transform:' + (b.inc ? 'translateX(16px)' : 'translateX(0)') + ';"></span></span>실적 포함' +
         '</button>' +
@@ -749,6 +764,7 @@ function renderSettingsScreen() {
   const benefits =
     '<div class="panel">' +
       '<div class="benefit-panel-head"><div><span class="settings-panel-title" style="margin-bottom:0;">혜택 항목</span><span class="benefit-panel-hint">이 카드로 받을 수 있는 혜택을 등록하세요</span></div></div>' +
+      '<div class="benefit-editor-header"><span>혜택처</span><span>혜택 내용</span><span></span><span>매칭 조건</span><span></span><span></span></div>' +
       '<div class="benefit-editor-list">' + benefitsHtml + '</div>' +
       '<button class="add-benefit-btn" data-action="settings-add-benefit">+ 혜택 항목 추가</button>' +
     '</div>';
@@ -825,7 +841,14 @@ function setupDelegation() {
         break;
       }
       case 'settings-benefit-place': updateBenefitField(el.dataset.benefitId, 'place', el.value); break;
-      case 'settings-benefit-desc': updateBenefitField(el.dataset.benefitId, 'desc', el.value); break;
+      case 'settings-benefit-rate': {
+        let v = el.value.replace(/[^0-9.]/g, '');
+        const parts = v.split('.');
+        if (parts.length > 2) v = parts[0] + '.' + parts.slice(1).join('');
+        updateBenefitField(el.dataset.benefitId, 'rate', v);
+        break;
+      }
+      case 'settings-benefit-keyword': updateBenefitField(el.dataset.benefitId, 'matchKeyword', el.value); break;
       default: break;
     }
   });
@@ -841,6 +864,7 @@ function setupDelegation() {
       case 'tx-row-benefit': setTxRowBenefit(el.dataset.rowId, el.value); break;
       case 'settings-custom-start': updateCard(state.settingsCardId, { customStartDay: el.value }); break;
       case 'settings-custom-end': updateCard(state.settingsCardId, { customEndDay: el.value }); break;
+      case 'settings-benefit-type': updateBenefitField(el.dataset.benefitId, 'benefitType', el.value); break;
       default: break;
     }
   });

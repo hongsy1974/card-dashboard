@@ -358,12 +358,20 @@ td { padding: var(--row-pad, 14px) 16px; }
 .benefit-panel-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
 .benefit-panel-hint { font-size: 12px; color: var(--muted-9); font-weight: 600; margin-left: 8px; }
 .benefit-editor-list { display: flex; flex-direction: column; gap: 10px; }
-.benefit-editor-row { display: grid; grid-template-columns: 1.1fr 1.6fr 110px 34px; align-items: center; gap: 12px; padding: 12px 14px; background: var(--bg); border: 1px solid var(--border-faint); border-radius: 11px; }
-.benefit-input { border: 1px solid var(--border-chip); background: #fff; border-radius: 8px; padding: 9px 11px; font-size: 13px; outline: none; }
+.benefit-editor-header { display: grid; grid-template-columns: 1fr 100px 92px 1fr 128px 34px; gap: 10px; padding: 0 14px; margin-bottom: 2px; }
+.benefit-editor-header span { font-size: 11px; font-weight: 700; color: var(--muted-6); letter-spacing: 0.02em; }
+.benefit-editor-row { display: grid; grid-template-columns: 1fr 100px 92px 1fr 128px 34px; align-items: center; gap: 10px; padding: 12px 14px; background: var(--bg); border: 1px solid var(--border-faint); border-radius: 11px; }
+.benefit-input { border: 1px solid var(--border-chip); background: #fff; border-radius: 8px; padding: 9px 11px; font-size: 13px; outline: none; width: 100%; }
 .benefit-input:focus { border-color: var(--accent); }
 .benefit-input.place { font-weight: 700; color: var(--text); }
-.benefit-input.desc { font-weight: 600; color: var(--ink-3); }
-.inc-toggle-btn { display: flex; align-items: center; gap: 7px; border: none; background: none; cursor: pointer; font-size: 12px; font-weight: 700; color: var(--muted-8); }
+.benefit-input.keyword { font-weight: 600; color: var(--ink-3); }
+.benefit-type-select { border: 1px solid var(--border-chip); background: #fff; border-radius: 8px; padding: 9px 8px; font-size: 12.5px; font-weight: 600; color: var(--text); cursor: pointer; outline: none; width: 100%; }
+.benefit-type-select:focus { border-color: var(--accent); }
+.benefit-rate-field { display: flex; align-items: center; border: 1px solid var(--border-chip); background: #fff; border-radius: 8px; padding: 0 9px; }
+.benefit-rate-field:focus-within { border-color: var(--accent); }
+.benefit-rate-field input { flex: 1; min-width: 0; border: none; padding: 9px 0; font-size: 13px; font-weight: 700; outline: none; color: var(--text); }
+.benefit-rate-field .unit { font-size: 12px; color: var(--muted-8); font-weight: 700; }
+.inc-toggle-btn { display: flex; align-items: center; gap: 7px; border: none; background: none; cursor: pointer; font-size: 12px; font-weight: 700; color: var(--muted-8); white-space: nowrap; }
 .inc-toggle-btn.on { color: var(--ink-3); }
 .mini-switch { width: 36px; height: 20px; border-radius: 11px; position: relative; flex: none; background: var(--border-track); }
 .mini-switch.on { background: var(--accent); }
