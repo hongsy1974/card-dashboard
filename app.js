@@ -92,6 +92,7 @@ const state = {
   txCardId: null,
   settingsCardId: null,
   uploadCardId: '',
+  uploadFileName: '',
   uploadStep: 0,
   txStatus: 'all',
   txBenefit: 'all',
@@ -204,12 +205,14 @@ function setScreen(s) { state.screen = s; render(); }
 function openCard(id) { state.screen = 'transactions'; state.txCardId = id; subscribeTx(id); render(); }
 
 function selectUploadCard(id) { state.uploadCardId = id; render(); }
-function runUpload() { if (state.uploadCardId) { state.uploadStep = 1; render(); } }
-function resetUpload() { state.uploadStep = 0; render(); }
+function setUploadFile(name) { state.uploadFileName = name || ''; render(); }
+function runUpload() { if (state.uploadCardId && state.uploadFileName) { state.uploadStep = 1; render(); } }
+function resetUpload() { state.uploadStep = 0; state.uploadFileName = ''; render(); }
 function saveUpload() {
   state.screen = 'transactions';
   state.txCardId = state.uploadCardId;
   state.uploadStep = 0;
+  state.uploadFileName = '';
   subscribeTx(state.txCardId);
   render();
 }
@@ -503,7 +506,9 @@ function renderUploadScreen() {
   const cards = state.cards;
   if (cards.length === 0) return renderNoCardsPanel();
   const uploadCard = findCard(state.uploadCardId);
-  const runReady = !!state.uploadCardId;
+  const cardChosen = !!state.uploadCardId;
+  const fileChosen = !!state.uploadFileName;
+  const runReady = cardChosen && fileChosen;
 
   if (state.uploadStep === 0) {
     const chips = cards.map(c => {
@@ -515,17 +520,22 @@ function renderUploadScreen() {
       );
     }).join('');
 
-    const hint = runReady ? '선택한 카드: ' + esc(uploadCard.name) : '먼저 위에서 카드를 선택하세요';
+    let hint;
+    if (!cardChosen) hint = '먼저 위에서 카드를 선택하세요';
+    else if (!fileChosen) hint = '선택한 카드: ' + esc(uploadCard.name) + ' · 파일을 선택해주세요';
+    else hint = '선택한 카드: ' + esc(uploadCard.name) + ' · 파일: ' + esc(state.uploadFileName);
 
     return (
       '<div class="upload-wrap">' +
+        '<div class="upload-note">참고: 파일을 선택할 수 있지만, 이 화면은 아직 실제 엑셀 내용을 읽지는 않는 미리보기(mock)입니다.</div>' +
         '<div class="panel"><div class="panel-title">1. 카드 선택</div><div class="chip-row">' + chips + '</div></div>' +
         '<div class="panel">' +
           '<div class="panel-title">2. 이용내역 엑셀 업로드</div>' +
-          '<div class="dropzone' + (runReady ? ' ready' : '') + '">' +
-            '<div class="dropzone-icon">↥</div>' +
-            '<div class="dropzone-title">엑셀 파일을 여기에 끌어다 놓으세요</div>' +
-            '<div class="dropzone-sub">카드사 홈페이지에서 내려받은 이용내역 파일 (.xlsx, .csv)</div>' +
+          '<div class="dropzone' + (fileChosen ? ' ready' : '') + '" data-action="upload-pick-file">' +
+            '<input type="file" id="uploadFileInput" accept=".xlsx,.csv" style="display:none;" data-action="upload-file-input" />' +
+            '<div class="dropzone-icon">' + (fileChosen ? '✓' : '↥') + '</div>' +
+            '<div class="dropzone-title">' + (fileChosen ? esc(state.uploadFileName) : '엑셀 파일을 여기에 끌어다 놓으세요') + '</div>' +
+            '<div class="dropzone-sub">' + (fileChosen ? '다른 파일을 선택하려면 클릭하거나 끌어다 놓으세요' : '카드사 홈페이지에서 내려받은 이용내역 파일 (.xlsx, .csv)') + '</div>' +
             '<button class="btn-secondary" type="button">파일 선택</button>' +
           '</div>' +
           '<div class="upload-actions">' +
@@ -802,6 +812,11 @@ function setupDelegation() {
       case 'open-card': openCard(el.dataset.cardId); break;
       case 'go-upload': setScreen('upload'); break;
       case 'upload-select-card': selectUploadCard(el.dataset.cardId); break;
+      case 'upload-pick-file': {
+        const input = document.getElementById('uploadFileInput');
+        if (input) input.click();
+        break;
+      }
       case 'run-upload': runUpload(); break;
       case 'reset-upload': resetUpload(); break;
       case 'save-upload': saveUpload(); break;
@@ -865,8 +880,19 @@ function setupDelegation() {
       case 'settings-custom-start': updateCard(state.settingsCardId, { customStartDay: el.value }); break;
       case 'settings-custom-end': updateCard(state.settingsCardId, { customEndDay: el.value }); break;
       case 'settings-benefit-type': updateBenefitField(el.dataset.benefitId, 'benefitType', el.value); break;
+      case 'upload-file-input': setUploadFile(el.files && el.files[0] ? el.files[0].name : ''); break;
       default: break;
     }
+  });
+
+  app.addEventListener('dragover', (e) => {
+    if (e.target.closest('.dropzone')) e.preventDefault();
+  });
+  app.addEventListener('drop', (e) => {
+    if (!e.target.closest('.dropzone')) return;
+    e.preventDefault();
+    const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if (file) setUploadFile(file.name);
   });
 }
 
