@@ -63,7 +63,7 @@ const PERIOD_MODE_DEFS = [
   { key: 'cycle', label: '전월 21일 ~ 당월 20일', sub: '카드 결제일 주기 기준' },
   { key: 'custom', label: '직접 지정', sub: '시작일·종료일을 직접 설정' },
 ];
-const DAY_OPTIONS = Array.from({ length: 28 }, (_, i) => String(i + 1));
+const DAY_OPTIONS = Array.from({ length: 31 }, (_, i) => String(i + 1));
 
 /* ===================== helpers ===================== */
 function won(n) { return Number(n || 0).toLocaleString('ko-KR') + '원'; }
