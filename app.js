@@ -1,6 +1,6 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js';
 import {
-  getFirestore, collection, doc, addDoc, updateDoc, onSnapshot, query, orderBy, serverTimestamp,
+  getFirestore, collection, doc, addDoc, updateDoc, setDoc, onSnapshot, query, orderBy, serverTimestamp,
 } from 'https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js';
 
 /* ===================== firebase ===================== */
@@ -15,6 +15,7 @@ const firebaseConfig = {
 const firebaseApp = initializeApp(firebaseConfig);
 const db = getFirestore(firebaseApp);
 const cardsCol = collection(db, 'cards');
+const monthsCol = collection(db, 'months');
 
 /* ===================== constants ===================== */
 const ACCENT = '#F26722';
@@ -35,11 +36,18 @@ const TITLES = {
   settings: ['카드 설정', '카드 정보, 실적 기준, 산정 기간, 혜택 항목을 관리합니다'],
 };
 
-const MONTH_OPTIONS = [
-  { value: '2026-06', label: '2026년 6월' }, { value: '2026-05', label: '2026년 5월' },
-  { value: '2026-04', label: '2026년 4월' }, { value: '2026-03', label: '2026년 3월' },
-  { value: '2026-02', label: '2026년 2월' }, { value: '2026-01', label: '2026년 1월' },
-];
+function currentMonthStr() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+}
+function monthLabel(ym) {
+  const [y, m] = ym.split('-');
+  return y + '년 ' + Number(m) + '월';
+}
+function computeMonthOptions() {
+  const set = new Set([currentMonthStr(), ...state.months]);
+  return Array.from(set).sort().reverse().map(ym => ({ value: ym, label: monthLabel(ym) }));
+}
 
 const BADGE = {
   under: { label: '실적 미달', bg: ACCENT, fg: '#fff', border: ACCENT },
@@ -88,7 +96,8 @@ function benefitLabel(b) {
 /* ===================== state ===================== */
 const state = {
   screen: 'dashboard',
-  month: '2026-06',
+  month: currentMonthStr(),
+  months: [],
   txCardId: null,
   settingsCardId: null,
   uploadCardId: '',
@@ -124,6 +133,20 @@ function subscribeCards() {
     state.cardsError = err && err.message ? err.message : String(err);
     render();
   });
+}
+
+function subscribeMonths() {
+  onSnapshot(monthsCol, (snap) => {
+    state.months = snap.docs.map(d => d.id);
+    render();
+  }, (err) => {
+    state.txError = err && err.message ? err.message : String(err);
+    render();
+  });
+}
+
+function recordUploadMonth(ym) {
+  setDoc(doc(db, 'months', ym), { label: monthLabel(ym), updatedAt: serverTimestamp() }, { merge: true }).catch(reportWriteError);
 }
 
 function ensureSelection() {
@@ -209,6 +232,7 @@ function setUploadFile(name) { state.uploadFileName = name || ''; render(); }
 function runUpload() { if (state.uploadCardId && state.uploadFileName) { state.uploadStep = 1; render(); } }
 function resetUpload() { state.uploadStep = 0; state.uploadFileName = ''; render(); }
 function saveUpload() {
+  recordUploadMonth(state.month);
   state.screen = 'transactions';
   state.txCardId = state.uploadCardId;
   state.uploadStep = 0;
@@ -378,7 +402,7 @@ function renderSidebar() {
 
 function renderTopbar() {
   const [title, subtitle] = TITLES[state.screen];
-  const monthOpts = MONTH_OPTIONS.map(m =>
+  const monthOpts = computeMonthOptions().map(m =>
     '<option value="' + m.value + '"' + (m.value === state.month ? ' selected' : '') + '>' + m.label + '</option>'
   ).join('');
 
@@ -527,7 +551,7 @@ function renderUploadScreen() {
 
     return (
       '<div class="upload-wrap">' +
-        '<div class="upload-note">참고: 파일을 선택할 수 있지만, 이 화면은 아직 실제 엑셀 내용을 읽지는 않는 미리보기(mock)입니다.</div>' +
+        '<div class="upload-note">참고: 파일을 선택할 수 있지만, 이 화면은 아직 실제 엑셀 내용을 읽지는 않는 미리보기(mock)입니다. 업로드를 저장하면 상단에서 선택한 조회 월(' + esc(monthLabel(state.month)) + ') 기준으로 기록됩니다.</div>' +
         '<div class="panel"><div class="panel-title">1. 카드 선택</div><div class="chip-row">' + chips + '</div></div>' +
         '<div class="panel">' +
           '<div class="panel-title">2. 이용내역 엑셀 업로드</div>' +
@@ -901,6 +925,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupDelegation();
   render();
   subscribeCards();
+  subscribeMonths();
   setTimeout(() => {
     if (!state.cardsLoaded) { state.bootSlow = true; render(); }
   }, 6000);
