@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Pretendard Variable','Pretendard',system-ui,-apple-system,sans-serif;color:#17171A;background:#FAFAF9;-webkit-font-smoothing:antialiased;letter-spacing:-0.01em}
+  ::-webkit-scrollbar{width:11px;height:11px}
+  ::-webkit-scrollbar-thumb{background:#D9D9D6;border-radius:8px;border:3px solid #FAFAF9}
+  ::-webkit-scrollbar-thumb:hover{background:#C2C2BE}
+  input,select,button{font-family:inherit;letter-spacing:inherit}
+</style>
+</helmet>
+
+<div style="display:flex;min-height:100vh;min-width:1180px; --accent:{{ accent }};">
+
+  <!-- ===================== SIDEBAR ===================== -->
+  <aside style="width:236px;flex:none;background:#FFFFFF;border-right:1px solid #ECEBE8;display:flex;flex-direction:column;position:sticky;top:0;height:100vh;">
+    <div style="padding:24px 22px 18px;">
+      <div style="display:flex;align-items:center;gap:9px;">
+        <div style="width:30px;height:30px;border-radius:8px;background:var(--accent,#F26722);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:16px;">실</div>
+        <div style="line-height:1.15;">
+          <div style="font-size:14.5px;font-weight:800;">실적관리</div>
+          <div style="font-size:10.5px;color:#9A9A96;font-weight:600;letter-spacing:0.02em;">CARD PERFORMANCE</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="padding:6px 12px;display:flex;flex-direction:column;gap:2px;">
+      <div style="font-size:10.5px;font-weight:700;color:#B7B7B2;padding:10px 10px 6px;letter-spacing:0.04em;">MENU</div>
+      <sc-for list="{{ navItems }}" as="n" hint-placeholder-count="4">
+        <button onClick="{{ n.onClick }}" style="display:flex;align-items:center;gap:11px;width:100%;border:none;cursor:pointer;padding:10px 11px;border-radius:9px;font-size:13.5px;font-weight:{{ n.weight }};text-align:left;background:{{ n.bg }};color:{{ n.color }};transition:background .12s;" style-hover="background:#F5F4F1;">
+          <span style="width:19px;height:19px;flex:none;display:flex;align-items:center;justify-content:center;color:{{ n.icoColor }};" data-om-icon="{{ n.key }}">{{ n.icon }}</span>
+          <span>{{ n.label }}</span>
+        </button>
+      </sc-for>
+    </div>
+
+    <div style="margin-top:auto;padding:16px;border-top:1px solid #F0EFEC;">
+      <div style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:10px;background:#FAFAF9;">
+        <div style="width:32px;height:32px;border-radius:50%;background:#E9E8E4;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:#66655F;">담</div>
+        <div style="line-height:1.25;">
+          <div style="font-size:12.5px;font-weight:700;">담당자</div>
+          <div style="font-size:10.5px;color:#9A9A96;">finance@company.co.kr</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ===================== MAIN ===================== -->
+  <main style="flex:1;min-width:0;display:flex;flex-direction:column;">
+
+    <!-- TOP BAR -->
+    <header style="position:sticky;top:0;z-index:20;background:rgba(250,250,249,0.85);backdrop-filter:blur(8px);border-bottom:1px solid #ECEBE8;padding:20px 34px;display:flex;align-items:center;justify-content:space-between;gap:20px;">
+      <div style="line-height:1.25;">
+        <h1 style="margin:0;font-size:21px;font-weight:800;">{{ screenTitle }}</h1>
+        <p style="margin:5px 0 0;font-size:13px;color:#8B8B86;font-weight:500;">{{ screenSubtitle }}</p>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="display:flex;align-items:center;gap:7px;background:#fff;border:1px solid #E6E5E1;border-radius:9px;padding:8px 13px;font-size:13px;font-weight:600;color:#55554F;">
+          <span style="color:#B0B0AB;">조회 월</span>
+          <select value="{{ month }}" onChange="{{ onMonth }}" style="border:none;background:transparent;font-size:13px;font-weight:700;color:#17171A;cursor:pointer;outline:none;">
+            <sc-for list="{{ monthOptions }}" as="m" hint-placeholder-count="6">
+              <option value="{{ m.value }}">{{ m.label }}</option>
+            </sc-for>
+          </select>
+        </div>
+        <button onClick="{{ goUpload }}" style="display:flex;align-items:center;gap:7px;background:var(--accent,#F26722);color:#fff;border:none;border-radius:9px;padding:10px 16px;font-size:13.5px;font-weight:700;cursor:pointer;box-shadow:0 1px 2px rgba(242,103,34,.28);" style-hover="filter:brightness(0.94);">
+          <span style="font-size:15px;line-height:1;">↥</span> 엑셀 업로드
+        </button>
+      </div>
+    </header>
+
+    <div style="padding:28px 34px 48px;">
+
+      <!-- ==================================================== -->
+      <!-- ① DASHBOARD                                          -->
+      <!-- ==================================================== -->
+      <sc-if value="{{ isDashboard }}" hint-placeholder-val="{{ true }}">
+      <div>
+        <!-- summary tiles -->
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:26px;">
+          <div style="background:#fff;border:1px solid #ECEBE8;border-radius:14px;padding:18px 20px;">
+            <div style="font-size:12px;font-weight:600;color:#98988F;">총 사용금액</div>
+            <div style="font-size:26px;font-weight:800;margin-top:9px;letter-spacing:-0.02em;">{{ sum.spend }}</div>
+            <div style="font-size:11.5px;color:#ACACA7;margin-top:5px;font-weight:500;">이번 달 전체 카드 승인 합계</div>
+          </div>
+          <div style="background:#fff;border:1px solid #ECEBE8;border-radius:14px;padding:18px 20px;">
+            <div style="font-size:12px;font-weight:600;color:#98988F;">실적 달성 카드</div>
+            <div style="font-size:26px;font-weight:800;margin-top:9px;color:var(--accent,#F26722);letter-spacing:-0.02em;">{{ sum.achieved }}<span style="font-size:16px;color:#C7C7C2;font-weight:700;"> / {{ sum.total }}장</span></div>
+            <div style="font-size:11.5px;color:#ACACA7;margin-top:5px;font-weight:500;">전월 실적 기준 충족 카드 수</div>
+          </div>
+          <div style="background:#fff;border:1px solid #ECEBE8;border-radius:14px;padding:18px 20px;">
+            <div style="font-size:12px;font-weight:600;color:#98988F;">획득 혜택 합계</div>
+            <div style="font-size:26px;font-weight:800;margin-top:9px;color:var(--accent,#F26722);letter-spacing:-0.02em;">{{ sum.benefit }}</div>
+            <div style="font-size:11.5px;color:#ACACA7;margin-top:5px;font-weight:500;">캐시백·할인·포인트 환산액</div>
+          </div>
+          <div style="background:#fff;border:1px solid #F3D3BF;border-radius:14px;padding:18px 20px;position:relative;overflow:hidden;">
+            <div style="position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--accent,#F26722);"></div>
+            <div style="font-size:12px;font-weight:600;color:#C2601F;">확인 필요 카드</div>
+            <div style="font-size:26px;font-weight:800;margin-top:9px;color:var(--accent,#F26722);letter-spacing:-0.02em;">{{ sum.under }}<span style="font-size:16px;color:#E2A987;font-weight:700;">장</span></div>
+            <div style="font-size:11.5px;color:#C89474;margin-top:5px;font-weight:500;">기준 미달 · 마감 전 확인하세요</div>
+          </div>
+        </div>
+
+        <!-- section label -->
+        <div style="display:flex;align-items:center;gap:10px;margin:0 2px 14px;">
+          <h2 style="margin:0;font-size:15px;font-weight:800;">카드별 실적 현황</h2>
+          <span style="font-size:12px;color:#ABABA6;font-weight:600;">· 기준 미달 카드가 상단에 표시됩니다</span>
+          <div style="margin-left:auto;display:flex;gap:14px;font-size:11.5px;font-weight:600;color:#9A9A95;">
+            <span style="display:flex;align-items:center;gap:5px;"><span style="width:8px;height:8px;border-radius:2px;background:var(--accent,#F26722);"></span>실적 미달</span>
+            <span style="display:flex;align-items:center;gap:5px;"><span style="width:8px;height:8px;border-radius:2px;background:#F6C6A8;"></span>기준 근접</span>
+            <span style="display:flex;align-items:center;gap:5px;"><span style="width:8px;height:8px;border-radius:2px;background:#D9D9D5;"></span>달성 완료</span>
+          </div>
+        </div>
+
+        <!-- card grid -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(352px,1fr));gap:18px;">
+          <sc-for list="{{ cardsView }}" as="c" hint-placeholder-count="6">
+            <div onClick="{{ c.onOpen }}" style="background:#fff;border:1px solid {{ c.cardBorder }};border-radius:15px;overflow:hidden;cursor:pointer;transition:box-shadow .14s,transform .14s;position:relative;" style-hover="box-shadow:0 6px 22px rgba(20,20,20,.09);transform:translateY(-2px);">
+              <div style="height:4px;background:{{ c.stripColor }};"></div>
+              <div style="padding:18px 20px 20px;">
+                <!-- head -->
+                <div style="display:flex;align-items:flex-start;gap:12px;">
+                  <div style="width:46px;height:30px;border-radius:6px;flex:none;background:{{ c.hex }};display:flex;align-items:center;justify-content:center;color:#fff;font-size:9px;font-weight:700;letter-spacing:0.02em;box-shadow:inset 0 -6px 10px rgba(0,0,0,.18);">{{ c.chip }}</div>
+                  <div style="min-width:0;flex:1;">
+                    <div style="font-size:14.5px;font-weight:800;line-height:1.25;">{{ c.name }}</div>
+                    <div style="font-size:11.5px;color:#A2A29D;font-weight:600;margin-top:2px;">{{ c.issuer }}</div>
+                  </div>
+                  <span style="flex:none;font-size:11px;font-weight:700;padding:5px 10px;border-radius:20px;background:{{ c.badgeBg }};color:{{ c.badgeFg }};border:1px solid {{ c.badgeBorder }};">{{ c.statusLabel }}</span>
+                </div>
+
+                <!-- recognized amount -->
+                <div style="margin-top:18px;display:flex;align-items:baseline;gap:6px;">
+                  <span style="font-size:27px;font-weight:800;color:var(--accent,#F26722);letter-spacing:-0.02em;">{{ c.recognizedFmt }}</span>
+                  <span style="font-size:13px;color:#B4B4AF;font-weight:700;">/ {{ c.thresholdFmt }}</span>
+                </div>
+                <div style="font-size:11.5px;color:#9A9A95;font-weight:600;margin-top:1px;">실적 인정 금액 / 전월 실적 기준</div>
+
+                <!-- progress -->
+                <div style="margin-top:13px;">
+                  <div style="height:9px;border-radius:6px;background:#F0EFEC;overflow:hidden;">
+                    <div style="height:100%;width:{{ c.barPct }}%;background:{{ c.barColor }};border-radius:6px;transition:width .4s;"></div>
+                  </div>
+                  <div style="display:flex;justify-content:space-between;margin-top:7px;font-size:11.5px;font-weight:700;">
+                    <span style="color:{{ c.remainColor }};">{{ c.remainText }}</span>
+                    <span style="color:#8B8B86;">{{ c.pctText }}</span>
+                  </div>
+                </div>
+
+                <!-- divider -->
+                <div style="height:1px;background:#F0EFEC;margin:16px 0 14px;"></div>
+
+                <!-- mini stats -->
+                <div style="display:flex;gap:110px;">
+                  <div>
+                    <div style="font-size:16.5px;color:#A6A6A1;font-weight:600;">이번 달 사용</div>
+                    <div style="font-size:21px;font-weight:800;margin-top:3px;">{{ c.spendFmt }}</div>
+                  </div>
+                  <div>
+                    <div style="font-size:16.5px;color:#A6A6A1;font-weight:600;">획득 혜택</div>
+                    <div style="font-size:21px;font-weight:800;margin-top:3px;color:{{ c.benefitColor }};">{{ c.benefitFmt }}</div>
+                  </div>
+                </div>
+
+                <!-- benefits -->
+                <div style="margin-top:14px;">
+                  <sc-if value="{{ c.hasBenefits }}" hint-placeholder-val="{{ true }}">
+                    <div style="display:flex;flex-direction:column;gap:6px;">
+                      <sc-for list="{{ c.benefitList }}" as="b" hint-placeholder-count="2">
+                        <div style="display:flex;align-items:center;gap:8px;font-size:12px;">
+                          <span style="width:5px;height:5px;border-radius:50%;background:var(--accent,#F26722);flex:none;"></span>
+                          <span style="color:#55554F;font-weight:600;">{{ b.desc }}</span>
+                          <span style="margin-left:auto;font-weight:800;color:#33332F;">{{ b.got }}</span>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ c.noBenefits }}" hint-placeholder-val="{{ false }}">
+                    <div style="font-size:12px;color:#B4B4AF;font-weight:600;background:#FAFAF9;border:1px dashed #E4E3DF;border-radius:8px;padding:9px 11px;">아직 획득한 혜택이 없어요 · 기준 달성 시 적용됩니다</div>
+                  </sc-if>
+                </div>
+
+                <div style="margin-top:16px;display:flex;align-items:center;justify-content:flex-end;font-size:12.5px;font-weight:700;color:var(--accent,#F26722);">
+                  상세 내역 보기 <span style="margin-left:4px;">→</span>
+                </div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ==================================================== -->
+      <!-- ② UPLOAD                                             -->
+      <!-- ==================================================== -->
+      <sc-if value="{{ isUpload }}" hint-placeholder-val="{{ false }}">
+      <div style="max-width:920px;">
+        <sc-if value="{{ uploadStep0 }}" hint-placeholder-val="{{ true }}">
+        <div>
+          <div style="background:#fff;border:1px solid #ECEBE8;border-radius:14px;padding:24px 26px;margin-bottom:18px;">
+            <div style="font-size:13.5px;font-weight:800;margin-bottom:12px;">1. 카드 선택</div>
+            <div style="display:flex;flex-wrap:wrap;gap:9px;">
+              <sc-for list="{{ uploadCardChips }}" as="c" hint-placeholder-count="6">
+                <button onClick="{{ c.onSelect }}" style="display:flex;align-items:center;gap:9px;padding:10px 14px;border-radius:10px;cursor:pointer;font-size:13px;font-weight:700;background:{{ c.bg }};color:{{ c.color }};border:1.5px solid {{ c.border }};">
+                  <span style="width:26px;height:17px;border-radius:4px;background:{{ c.hex }};flex:none;"></span>{{ c.name }}
+                </button>
+              </sc-for>
+            </div>
+          </div>
+
+          <div style="background:#fff;border:1px solid #ECEBE8;border-radius:14px;padding:24px 26px;">
+            <div style="font-size:13.5px;font-weight:800;margin-bottom:14px;">2. 이용내역 엑셀 업로드</div>
+            <div style="border:2px dashed {{ dropBorder }};border-radius:14px;background:{{ dropBg }};padding:52px 20px;display:flex;flex-direction:column;align-items:center;text-align:center;transition:.15s;" style-hover="border-color:var(--accent,#F26722);background:#FEF6F1;">
+              <div style="width:54px;height:54px;border-radius:14px;background:#FEF1E9;display:flex;align-items:center;justify-content:center;color:var(--accent,#F26722);font-size:26px;margin-bottom:16px;">↥</div>
+              <div style="font-size:15px;font-weight:800;">엑셀 파일을 여기에 끌어다 놓으세요</div>
+              <div style="font-size:12.5px;color:#9A9A95;font-weight:500;margin-top:6px;">카드사 홈페이지에서 내려받은 이용내역 파일 (.xlsx, .csv)</div>
+              <button style="margin-top:18px;background:#fff;border:1.5px solid #E0DFDB;border-radius:9px;padding:9px 18px;font-size:13px;font-weight:700;cursor:pointer;color:#44443F;" style-hover="border-color:#C9C8C3;">파일 선택</button>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-top:20px;">
+              <div style="font-size:12px;color:#ABABA6;font-weight:600;">{{ uploadHint }}</div>
+              <button onClick="{{ onRunUpload }}" style="background:{{ runBg }};color:#fff;border:none;border-radius:10px;padding:12px 22px;font-size:14px;font-weight:800;cursor:{{ runCursor }};box-shadow:0 1px 2px rgba(242,103,34,.25);" style-hover="filter:brightness(0.95);">업로드하고 자동 판정 →</button>
+            </div>
+          </div>
+        </div>
+        </sc-if>
+
+        <sc-if value="{{ uploadStep1 }}" hint-placeholder-val="{{ false }}">
+        <div>
+          <div style="display:flex;align-items:center;gap:8px;background:#F1F7F1;border:1px solid #CFE6CF;border-radius:11px;padding:12px 16px;margin-bottom:18px;">
+            <span style="width:20px;height:20px;border-radius:50%;background:#2E9E4F;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;">✓</span>
+            <span style="font-size:13.5px;font-weight:700;color:#2A6B3C;">{{ uploadDoneCard }} · 업로드 및 자동 판정이 완료되었습니다</span>
+          </div>
+
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px;">
+            <div style="background:#fff;border:1px solid #ECEBE8;border-radius:13px;padding:16px 18px;"><div style="font-size:11.5px;color:#98988F;font-weight:600;">총 거래 건수</div><div style="font-size:23px;font-weight:800;margin-top:6px;">128<span style="font-size:14px;color:#C7C7C2;">건</span></div></div>
+            <div style="background:#fff;border:1px solid #ECEBE8;border-radius:13px;padding:16px 18px;"><div style="font-size:11.5px;color:#98988F;font-weight:600;">자동 매칭 성공</div><div style="font-size:23px;font-weight:800;margin-top:6px;color:#2E9E4F;">121<span style="font-size:14px;color:#A9D3B6;">건</span></div></div>
+            <div style="background:#fff;border:1px solid #F3D3BF;border-radius:13px;padding:16px 18px;position:relative;overflow:hidden;"><div style="position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--accent,#F26722);"></div><div style="font-size:11.5px;color:#C2601F;font-weight:600;">확인 필요</div><div style="font-size:23px;font-weight:800;margin-top:6px;color:var(--accent,#F26722);">7<span style="font-size:14px;color:#E2A987;">건</span></div></div>
+            <div style="background:#fff;border:1px solid #ECEBE8;border-radius:13px;padding:16px 18px;"><div style="font-size:11.5px;color:#98988F;font-weight:600;">실적 인정 예상</div><div style="font-size:23px;font-weight:800;margin-top:6px;color:var(--accent,#F26722);">{{ uploadRecognized }}</div></div>
+          </div>
+
+          <div style="background:#fff;border:1px solid #ECEBE8;border-radius:14px;padding:22px 24px;margin-bottom:18px;">
+            <div style="font-size:13.5px;font-weight:800;margin-bottom:4px;">컬럼 매핑 확인</div>
+            <div style="font-size:12px;color:#9A9A95;font-weight:500;margin-bottom:16px;">엑셀의 각 열이 어떤 항목으로 인식되었는지 확인하고 필요 시 변경하세요.</div>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <sc-for list="{{ colMap }}" as="m" hint-placeholder-count="5">
+                <div style="display:grid;grid-template-columns:1fr 34px 1fr 86px;align-items:center;gap:12px;padding:10px 14px;background:#FAFAF9;border:1px solid #F0EFEC;border-radius:10px;">
+                  <div style="font-size:13px;font-weight:700;color:#33332F;">{{ m.excel }}</div>
+                  <div style="text-align:center;color:#C4C4BF;font-size:15px;">→</div>
+                  <select value="{{ m.field }}" style="border:1px solid #E4E3DF;background:#fff;border-radius:8px;padding:8px 10px;font-size:13px;font-weight:600;color:#17171A;cursor:pointer;outline:none;">
+                    <sc-for list="{{ fieldOptions }}" as="f" hint-placeholder-count="6"><option value="{{ f }}">{{ f }}</option></sc-for>
+                  </select>
+                  <span style="justify-self:end;font-size:11px;font-weight:700;color:{{ m.okColor }};background:{{ m.okBg }};padding:4px 9px;border-radius:14px;">{{ m.okLabel }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+
+          <div style="display:flex;gap:10px;justify-content:flex-end;">
+            <button onClick="{{ onResetUpload }}" style="background:#fff;border:1.5px solid #E0DFDB;border-radius:10px;padding:11px 20px;font-size:13.5px;font-weight:700;cursor:pointer;color:#55554F;" style-hover="border-color:#C9C8C3;">다시 업로드</button>
+            <button onClick="{{ onSaveUpload }}" style="background:var(--accent,#F26722);color:#fff;border:none;border-radius:10px;padding:11px 22px;font-size:13.5px;font-weight:800;cursor:pointer;box-shadow:0 1px 2px rgba(242,103,34,.25);" style-hover="filter:brightness(0.95);">결과 저장하고 내역 관리로 →</button>
+          </div>
+        </div>
+        </sc-if>
+      </div>
+      </sc-if>
+
+      <!-- ==================================================== -->
+      <!-- ③ TRANSACTIONS                                       -->
+      <!-- ==================================================== -->
+      <sc-if value="{{ isTx }}" hint-placeholder-val="{{ false }}">
+      <div>
+        <!-- card selector -->
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px;">
+          <sc-for list="{{ txCardChips }}" as="c" hint-placeholder-count="6">
+            <button onClick="{{ c.onSelect }}" style="display:flex;align-items:center;gap:8px;padding:8px 13px;border-radius:9px;cursor:pointer;font-size:12.5px;font-weight:700;background:{{ c.bg }};color:{{ c.color }};border:1.5px solid {{ c.border }};">
+              <span style="width:22px;height:14px;border-radius:3px;background:{{ c.hex }};flex:none;"></span>{{ c.name }}
+            </button>
+          </sc-for>
+        </div>
+
+        <!-- filter bar -->
+        <div style="background:#fff;border:1px solid #ECEBE8;border-radius:13px;padding:14px 16px;margin-bottom:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <div style="display:flex;align-items:center;gap:7px;background:#FAFAF9;border:1px solid #E9E8E4;border-radius:9px;padding:8px 12px;flex:1;min-width:220px;">
+            <span style="color:#B7B7B2;font-size:14px;">⌕</span>
+            <input value="{{ txSearch }}" onInput="{{ onSearch }}" placeholder="가맹점명 검색" style="border:none;background:transparent;outline:none;font-size:13px;width:100%;color:#17171A;" />
+          </div>
+          <select value="{{ txStatus }}" onChange="{{ onTxStatus }}" style="border:1px solid #E4E3DF;background:#fff;border-radius:9px;padding:9px 12px;font-size:13px;font-weight:600;cursor:pointer;outline:none;color:#17171A;">
+            <option value="all">실적 포함 · 전체</option><option value="in">실적 포함만</option><option value="out">실적 제외만</option>
+          </select>
+          <select value="{{ txBenefit }}" onChange="{{ onTxBenefit }}" style="border:1px solid #E4E3DF;background:#fff;border-radius:9px;padding:9px 12px;font-size:13px;font-weight:600;cursor:pointer;outline:none;color:#17171A;">
+            <option value="all">혜택 · 전체</option><option value="yes">혜택 대상만</option><option value="no">혜택 없음만</option>
+          </select>
+          <button onClick="{{ onToggleUnclassified }}" style="display:flex;align-items:center;gap:7px;border:1px solid {{ unclBorder }};background:{{ unclBg }};color:{{ unclColor }};border-radius:9px;padding:9px 13px;font-size:13px;font-weight:700;cursor:pointer;">
+            <span style="width:14px;height:14px;border-radius:4px;border:1.5px solid {{ unclColor }};background:{{ unclCheckBg }};display:flex;align-items:center;justify-content:center;color:#fff;font-size:9px;">{{ unclCheck }}</span>미분류만
+          </button>
+          <div style="margin-left:auto;font-size:12px;color:#98988F;font-weight:600;">{{ txCountLabel }}</div>
+        </div>
+
+        <!-- table -->
+        <div style="background:#fff;border:1px solid #ECEBE8;border-radius:14px;overflow:hidden; --rowpad:{{ rowPad }};">
+          <table style="width:100%;border-collapse:collapse;font-size:13px;">
+            <thead>
+              <tr style="background:#FAFAF9;border-bottom:1px solid #EDECE9;text-align:left;color:#8B8B86;">
+                <th style="padding:12px 16px;font-weight:700;font-size:11.5px;letter-spacing:0.02em;">거래일자</th>
+                <th style="padding:12px 16px;font-weight:700;font-size:11.5px;">가맹점명</th>
+                <sc-if value="{{ showCategory }}" hint-placeholder-val="{{ true }}"><th style="padding:12px 16px;font-weight:700;font-size:11.5px;">카테고리</th></sc-if>
+                <th style="padding:12px 16px;font-weight:700;font-size:11.5px;text-align:right;">금액</th>
+                <th style="padding:12px 16px;font-weight:700;font-size:11.5px;">결제방식</th>
+                <th style="padding:12px 16px;font-weight:700;font-size:11.5px;text-align:center;">실적 포함</th>
+                <th style="padding:12px 16px;font-weight:700;font-size:11.5px;">혜택 항목</th>
+                <th style="padding:12px 16px;font-weight:700;font-size:11.5px;text-align:center;">판정</th>
+              </tr>
+            </thead>
+            <tbody>
+              <sc-for list="{{ txRows }}" as="r" hint-placeholder-count="10">
+                <tr style="border-bottom:1px solid #F3F2EF;transition:background .1s;" style-hover="background:#FCFBF9;">
+                  <td style="padding:var(--rowpad,14px) 16px;color:#66655F;font-weight:600;white-space:nowrap;">{{ r.date }}</td>
+                  <td style="padding:var(--rowpad,14px) 16px;font-weight:700;color:#17171A;">{{ r.merchant }}</td>
+                  <sc-if value="{{ showCategory }}" hint-placeholder-val="{{ true }}"><td style="padding:var(--rowpad,14px) 16px;"><span style="font-size:11.5px;font-weight:600;color:#8B8B86;background:#F4F3F0;padding:3px 9px;border-radius:12px;">{{ r.category }}</span></td></sc-if>
+                  <td style="padding:var(--rowpad,14px) 16px;text-align:right;font-weight:800;color:#17171A;white-space:nowrap;">{{ r.amountFmt }}</td>
+                  <td style="padding:var(--rowpad,14px) 16px;color:#66655F;font-weight:600;white-space:nowrap;">{{ r.method }}</td>
+                  <td style="padding:var(--rowpad,14px) 16px;text-align:center;">
+                    <button onClick="{{ r.onToggle }}" style="width:40px;height:22px;border-radius:12px;border:none;cursor:pointer;position:relative;background:{{ r.trackBg }};transition:background .15s;padding:0;">
+                      <span style="position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transform:{{ r.knobX }};transition:transform .15s;"></span>
+                    </button>
+                  </td>
+                  <td style="padding:var(--rowpad,14px) 16px;">
+                    <select value="{{ r.benefitValue }}" onChange="{{ r.onBenefit }}" style="border:1px solid {{ r.selBorder }};background:{{ r.selBg }};color:{{ r.selColor }};border-radius:8px;padding:6px 9px;font-size:12.5px;font-weight:{{ r.selWeight }};cursor:pointer;outline:none;max-width:180px;">
+                      <sc-for list="{{ r.benefitOptions }}" as="o" hint-placeholder-count="3"><option value="{{ o }}">{{ o }}</option></sc-for>
+                    </select>
+                  </td>
+                  <td style="padding:var(--rowpad,14px) 16px;text-align:center;">
+                    <span style="font-size:11px;font-weight:700;padding:4px 9px;border-radius:12px;background:{{ r.srcBg }};color:{{ r.srcColor }};white-space:nowrap;">{{ r.srcLabel }}</span>
+                  </td>
+                </tr>
+              </sc-for>
+            </tbody>
+          </table>
+          <sc-if value="{{ txEmpty }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:44px;text-align:center;font-size:13px;color:#ABABA6;font-weight:600;">조건에 맞는 거래 내역이 없습니다.</div>
+          </sc-if>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ==================================================== -->
+      <!-- ④ SETTINGS                                           -->
+      <!-- ==================================================== -->
+      <sc-if value="{{ isSettings }}" hint-placeholder-val="{{ false }}">
+      <div style="display:grid;grid-template-columns:230px 1fr;gap:22px;align-items:start;">
+        <!-- card list -->
+        <div style="background:#fff;border:1px solid #ECEBE8;border-radius:14px;padding:12px;position:sticky;top:96px;">
+          <div style="font-size:11.5px;font-weight:700;color:#B7B7B2;padding:8px 8px 10px;letter-spacing:0.03em;">등록된 카드</div>
+          <div style="display:flex;flex-direction:column;gap:3px;">
+            <sc-for list="{{ settingsCardList }}" as="c" hint-placeholder-count="6">
+              <button onClick="{{ c.onSelect }}" style="display:flex;align-items:center;gap:10px;width:100%;border:none;cursor:pointer;padding:10px;border-radius:9px;text-align:left;background:{{ c.bg }};" style-hover="background:#F5F4F1;">
+                <span style="width:30px;height:19px;border-radius:4px;background:{{ c.hex }};flex:none;"></span>
+                <span style="min-width:0;"><span style="display:block;font-size:12.5px;font-weight:700;color:{{ c.color }};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ c.name }}</span><span style="font-size:10.5px;color:#A6A6A1;font-weight:600;">{{ c.issuer }}</span></span>
+              </button>
+            </sc-for>
+          </div>
+          <button style="width:100%;margin-top:8px;border:1.5px dashed #DDDCD7;background:#FAFAF9;border-radius:9px;padding:10px;font-size:12.5px;font-weight:700;color:#8B8B86;cursor:pointer;" style-hover="border-color:var(--accent,#F26722);color:var(--accent,#F26722);">+ 카드 등록</button>
+        </div>
+
+        <!-- editor -->
+        <div style="display:flex;flex-direction:column;gap:18px;">
+          <!-- basic info -->
+          <div style="background:#fff;border:1px solid #ECEBE8;border-radius:14px;padding:24px 26px;">
+            <div style="font-size:14px;font-weight:800;margin-bottom:18px;">카드 기본 정보</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px 20px;">
+              <label style="display:block;">
+                <span style="display:block;font-size:12px;font-weight:700;color:#8B8B86;margin-bottom:7px;">카드명</span>
+                <input value="{{ set.name }}" onInput="{{ set.onName }}" style="width:100%;border:1px solid #E4E3DF;border-radius:9px;padding:11px 13px;font-size:13.5px;font-weight:600;outline:none;color:#17171A;" style-focus="border-color:var(--accent,#F26722);" />
+              </label>
+              <label style="display:block;">
+                <span style="display:block;font-size:12px;font-weight:700;color:#8B8B86;margin-bottom:7px;">카드사</span>
+                <input value="{{ set.issuer }}" onInput="{{ set.onIssuer }}" style="width:100%;border:1px solid #E4E3DF;border-radius:9px;padding:11px 13px;font-size:13.5px;font-weight:600;outline:none;color:#17171A;" style-focus="border-color:var(--accent,#F26722);" />
+              </label>
+              <label style="display:block;">
+                <span style="display:block;font-size:12px;font-weight:700;color:#8B8B86;margin-bottom:7px;">카드 색상</span>
+                <div style="display:flex;gap:8px;">
+                  <sc-for list="{{ colorSwatches }}" as="s" hint-placeholder-count="6">
+                    <button onClick="{{ s.onPick }}" style="width:30px;height:30px;border-radius:8px;background:{{ s.hex }};cursor:pointer;border:2.5px solid {{ s.ring }};padding:0;"></button>
+                  </sc-for>
+                </div>
+              </label>
+              <label style="display:block;">
+                <span style="display:block;font-size:12px;font-weight:700;color:#8B8B86;margin-bottom:7px;">전월 실적 기준 금액</span>
+                <div style="display:flex;align-items:center;border:1px solid #E4E3DF;border-radius:9px;padding:0 13px;" style-focus="border-color:var(--accent,#F26722);">
+                  <input value="{{ set.threshold }}" onInput="{{ set.onThreshold }}" style="flex:1;border:none;padding:11px 0;font-size:13.5px;font-weight:800;outline:none;color:var(--accent,#F26722);" />
+                  <span style="font-size:13px;color:#A6A6A1;font-weight:700;">원</span>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <!-- period -->
+          <div style="background:#fff;border:1px solid #ECEBE8;border-radius:14px;padding:24px 26px;">
+            <div style="font-size:14px;font-weight:800;">실적 산정 기간</div>
+            <div style="font-size:12px;color:#9A9A95;font-weight:500;margin-top:4px;margin-bottom:16px;">카드사 기준에 맞춰 실적을 집계할 기간을 설정하세요.</div>
+            <div style="display:flex;flex-direction:column;gap:9px;">
+              <sc-for list="{{ periodModes }}" as="p" hint-placeholder-count="3">
+                <button onClick="{{ p.onPick }}" style="display:flex;align-items:center;gap:12px;width:100%;text-align:left;border:1.5px solid {{ p.border }};background:{{ p.bg }};border-radius:11px;padding:14px 16px;cursor:pointer;">
+                  <span style="width:18px;height:18px;border-radius:50%;border:2px solid {{ p.dotBorder }};flex:none;display:flex;align-items:center;justify-content:center;"><span style="width:8px;height:8px;border-radius:50%;background:{{ p.dotFill }};"></span></span>
+                  <span><span style="display:block;font-size:13.5px;font-weight:700;color:#17171A;">{{ p.label }}</span><span style="font-size:11.5px;color:#9A9A95;font-weight:600;">{{ p.sub }}</span></span>
+                </button>
+              </sc-for>
+            </div>
+            <sc-if value="{{ periodCustom }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;align-items:center;gap:10px;margin-top:14px;padding:14px 16px;background:#FAFAF9;border:1px solid #F0EFEC;border-radius:11px;">
+                <span style="font-size:12.5px;font-weight:700;color:#66655F;">전월</span>
+                <select style="border:1px solid #E4E3DF;background:#fff;border-radius:8px;padding:8px 11px;font-size:13px;font-weight:700;cursor:pointer;outline:none;"><sc-for list="{{ dayOptions }}" as="d" hint-placeholder-count="6"><option>{{ d }}</option></sc-for></select>
+                <span style="font-size:12.5px;font-weight:700;color:#66655F;">일 ~ 당월</span>
+                <select style="border:1px solid #E4E3DF;background:#fff;border-radius:8px;padding:8px 11px;font-size:13px;font-weight:700;cursor:pointer;outline:none;"><sc-for list="{{ dayOptions }}" as="d" hint-placeholder-count="6"><option>{{ d }}</option></sc-for></select>
+                <span style="font-size:12.5px;font-weight:700;color:#66655F;">일</span>
+              </div>
+            </sc-if>
+          </div>
+
+          <!-- benefits -->
+          <div style="background:#fff;border:1px solid #ECEBE8;border-radius:14px;padding:24px 26px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+              <div><span style="font-size:14px;font-weight:800;">혜택 항목</span><span style="font-size:12px;color:#9A9A95;font-weight:600;margin-left:8px;">이 카드로 받을 수 있는 혜택을 등록하세요</span></div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:10px;">
+              <sc-for list="{{ set.benefits }}" as="b" hint-placeholder-count="2">
+                <div style="display:grid;grid-template-columns:1.1fr 1.6fr 110px 34px;align-items:center;gap:12px;padding:12px 14px;background:#FAFAF9;border:1px solid #F0EFEC;border-radius:11px;">
+                  <input value="{{ b.place }}" onInput="{{ b.onPlace }}" placeholder="혜택처" style="border:1px solid #E7E6E2;background:#fff;border-radius:8px;padding:9px 11px;font-size:13px;font-weight:700;outline:none;color:#17171A;" style-focus="border-color:var(--accent,#F26722);" />
+                  <input value="{{ b.desc }}" onInput="{{ b.onDesc }}" placeholder="혜택 내용 · 매칭 조건" style="border:1px solid #E7E6E2;background:#fff;border-radius:8px;padding:9px 11px;font-size:13px;font-weight:600;outline:none;color:#44443F;" style-focus="border-color:var(--accent,#F26722);" />
+                  <button onClick="{{ b.onToggle }}" style="display:flex;align-items:center;gap:7px;border:none;background:none;cursor:pointer;font-size:12px;font-weight:700;color:{{ b.incColor }};">
+                    <span style="width:36px;height:20px;border-radius:11px;position:relative;background:{{ b.trackBg }};flex:none;"><span style="position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.2);transform:{{ b.knobX }};transition:.15s;"></span></span>실적 포함
+                  </button>
+                  <button onClick="{{ b.onRemove }}" style="width:34px;height:34px;border-radius:8px;border:1px solid #EBEAE6;background:#fff;cursor:pointer;color:#B7B7B2;font-size:16px;justify-self:end;" style-hover="border-color:#E5B8A2;color:var(--accent,#F26722);">×</button>
+                </div>
+              </sc-for>
+            </div>
+            <button onClick="{{ onAddBenefit }}" style="width:100%;margin-top:10px;border:1.5px dashed #DDDCD7;background:#FAFAF9;border-radius:10px;padding:12px;font-size:13px;font-weight:700;color:#8B8B86;cursor:pointer;" style-hover="border-color:var(--accent,#F26722);color:var(--accent,#F26722);">+ 혜택 항목 추가</button>
+          </div>
+
+          <!-- history -->
+          <div style="background:#fff;border:1px solid #ECEBE8;border-radius:14px;padding:24px 26px;">
+            <div style="font-size:14px;font-weight:800;margin-bottom:4px;">월별 실적 이력</div>
+            <div style="font-size:12px;color:#9A9A95;font-weight:500;margin-bottom:20px;">최근 6개월 실적 인정 금액과 달성 여부입니다.</div>
+            <div style="display:flex;align-items:flex-end;gap:16px;height:150px;padding:0 4px;">
+              <sc-for list="{{ history }}" as="h" hint-placeholder-count="6">
+                <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;height:100%;justify-content:flex-end;">
+                  <div style="font-size:11px;font-weight:800;color:{{ h.amtColor }};">{{ h.amtShort }}</div>
+                  <div style="width:100%;max-width:44px;border-radius:7px 7px 3px 3px;background:{{ h.barColor }};height:{{ h.barH }}px;position:relative;transition:.3s;"></div>
+                  <div style="font-size:11.5px;font-weight:700;color:#8B8B86;">{{ h.month }}</div>
+                  <div style="font-size:10px;font-weight:700;color:{{ h.tagColor }};background:{{ h.tagBg }};padding:2px 7px;border-radius:10px;">{{ h.tag }}</div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+    </div>
+  </main>
+</div>
+
+<template id="__bundler_thumbnail">
+  <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    <rect width="100" height="100" fill="#FAFAF9"/>
+    <rect x="30" y="30" width="40" height="26" rx="6" fill="#F26722"/>
+    <text x="50" y="48" font-family="sans-serif" font-size="15" font-weight="800" fill="#fff" text-anchor="middle">실</text>
+  </svg>
+</template>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:920},&quot;accent&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;#F76707&quot;,&quot;options&quot;:[&quot;#F26722&quot;,&quot;#E8590C&quot;,&quot;#D9480F&quot;,&quot;#F76707&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;디자인&quot;},&quot;density&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;comfortable&quot;,&quot;compact&quot;],&quot;default&quot;:&quot;comfortable&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;디자인&quot;},&quot;showCategory&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;테이블&quot;}}">
+class Component extends DCLogic {
+  state = {
+    screen: 'dashboard',
+    month: '2026-06',
+    txCardId: 'samsung-taptap',
+    settingsCardId: 'samsung-taptap',
+    uploadCardId: '',
+    uploadStep: 0,
+    txStatus: 'all',
+    txBenefit: 'all',
+    txUnclassified: false,
+    txSearch: '',
+    periodMode: 'calendar',
+    cards: this.buildCards(),
+    tx: null,
+  };
+
+  componentDidMount() {
+    if (!this.state.tx) this.setState({ tx: this.buildTx() });
+  }
+
+  won(n) { return Number(n).toLocaleString('ko-KR') + '원'; }
+  wonShort(n) { return n >= 10000 ? (Math.round(n/1000)/10) + '만' : Number(n).toLocaleString('ko-KR'); }
+
+  buildCards() {
+    return [
+      {id:'samsung-taptap', name:'삼성카드 taptap O', issuer:'삼성카드', chip:'SAMSUNG', hex:'#16213E', threshold:300000, spend:224000, recognized:198000, benefits:[
+        {id:'b1', place:'스타벅스', desc:'스타벅스 10% 청구할인', got:'0원', inc:true},
+        {id:'b2', place:'대중교통', desc:'버스·지하철 3% 캐시백', got:'0원', inc:true}]},
+      {id:'hyundai-m', name:'현대카드 M BOOST', issuer:'현대카드', chip:'hyundai', hex:'#1C1C1E', threshold:500000, spend:612000, recognized:520000, benefits:[
+        {id:'b1', place:'전 가맹점', desc:'M포인트 3배 적립', got:'32,000 P', inc:true},
+        {id:'b2', place:'주유소', desc:'리터당 60원 할인', got:'14,000원', inc:true}]},
+      {id:'shinhan-deepdream', name:'신한카드 Deep Dream', issuer:'신한카드', chip:'SHINHAN', hex:'#0A3FD6', threshold:400000, spend:372000, recognized:352000, benefits:[
+        {id:'b1', place:'온라인쇼핑', desc:'온라인 결제 5% 포인트 적립', got:'21,000 P', inc:true}]},
+      {id:'woori-jeongseok', name:'우리카드 카드의정석', issuer:'우리카드', chip:'WOORI', hex:'#0067AC', threshold:250000, spend:238000, recognized:231000, benefits:[
+        {id:'b1', place:'대중교통', desc:'교통요금 10% 청구할인', got:'9,800원', inc:true}]},
+      {id:'kb-tantan', name:'국민카드 탄탄대로', issuer:'국민카드', chip:'KB', hex:'#5B4B3A', threshold:300000, spend:331000, recognized:305000, benefits:[
+        {id:'b1', place:'생활요금', desc:'통신·공과금 5% 할인', got:'12,500원', inc:true},
+        {id:'b2', place:'편의점', desc:'건당 1,000원 할인', got:'6,000원', inc:true}]},
+      {id:'lotte-loca', name:'롯데카드 LOCA', issuer:'롯데카드', chip:'LOTTE', hex:'#C8102E', threshold:600000, spend:255000, recognized:242000, benefits:[
+        {id:'b1', place:'백화점', desc:'롯데백화점 5% 할인', got:'0원', inc:true}]},
+    ];
+  }
+
+  buildTx() {
+    const pool = [
+      ['스타벅스 강남2호점','카페/음료',5600],['GS25 역삼점','편의점',3200],['배달의민족','배달앱',24000],
+      ['카카오 T 택시','교통',13800],['쿠팡','온라인쇼핑',48900],['이마트 성수점','대형마트',87400],
+      ['SK에너지 셀프주유소','주유',60000],['CGV 왕십리','문화/영화',15000],['올리브영 명동점','뷰티',32400],
+      ['넷플릭스','구독서비스',13500],['맥도날드 시청점','외식',9600],['교보문고 광화문','도서',28000],
+      ['다이소 종로점','생활잡화','8700'],['농협 하나로마트','대형마트',54300],
+    ];
+    const methods = ['일시불','일시불','할부 3개월','일시불','체크','일시불','할부 6개월'];
+    const out = {};
+    this.buildCards().forEach((c, ci) => {
+      const rows = [];
+      const places = c.benefits.map(b => b.place);
+      for (let i = 0; i < 12; i++) {
+        const p = pool[(i + ci * 4) % pool.length];
+        const day = String(2 + ((i * 3 + ci * 2) % 26)).padStart(2, '0');
+        const amt = Number(p[2]) + ((ci * 137 + i * 311) % 5000);
+        const included = !((i + ci) % 7 === 3);
+        const bItem = (places.length && (i + ci) % 3 === 0) ? places[i % places.length] : '';
+        const classified = !((i + ci) % 9 === 4);
+        rows.push({
+          id: c.id + '-' + i, date: '2026-06-' + day, merchant: p[0], category: p[1],
+          amount: amt, method: methods[i % methods.length], included, benefitItem: bItem,
+          classified, source: ((i + ci) % 4 === 1) ? 'manual' : 'auto',
+        });
+      }
+      out[c.id] = rows;
+    });
+    return out;
+  }
+
+  status(pct) { return pct >= 100 ? 'achieved' : (pct >= 80 ? 'near' : 'under'); }
+
+  // ---------- nav ----------
+  go(s) { return () => this.setState({ screen: s }); }
+  openCard(id) { return () => this.setState({ screen: 'transactions', txCardId: id }); }
+
+  // ---------- upload ----------
+  selUpload(id) { return () => this.setState({ uploadCardId: id }); }
+  runUpload() { if (this.state.uploadCardId) this.setState({ uploadStep: 1 }); }
+  resetUpload() { this.setState({ uploadStep: 0 }); }
+  saveUpload() { this.setState({ screen: 'transactions', txCardId: this.state.uploadCardId, uploadStep: 0 }); }
+
+  // ---------- tx ----------
+  toggleTx(id) {
+    this.setState(s => {
+      const tx = { ...s.tx };
+      const arr = tx[s.txCardId].map(r => r.id === id ? { ...r, included: !r.included, source: 'manual', classified: true } : r);
+      tx[s.txCardId] = arr;
+      return { tx };
+    });
+  }
+  setTxBenefit(id, val) {
+    this.setState(s => {
+      const tx = { ...s.tx };
+      const item = val === '해당 없음' ? '' : val;
+      const arr = tx[s.txCardId].map(r => r.id === id ? { ...r, benefitItem: item, source: 'manual', classified: true } : r);
+      tx[s.txCardId] = arr;
+      return { tx };
+    });
+  }
+
+  // ---------- settings ----------
+  selSettings(id) { return () => this.setState({ settingsCardId: id }); }
+  mutCard(fn) {
+    this.setState(s => ({ cards: s.cards.map(c => c.id === s.settingsCardId ? fn({ ...c }) : c) }));
+  }
+  updBenefit(bid, field, val) {
+    this.mutCard(c => ({ ...c, benefits: c.benefits.map(b => b.id === bid ? { ...b, [field]: val } : b) }));
+  }
+  addBenefit() {
+    this.mutCard(c => ({ ...c, benefits: [...c.benefits, { id: 'b' + Date.now(), place: '', desc: '', got: '0원', inc: true }] }));
+  }
+  removeBenefit(bid) {
+    this.mutCard(c => ({ ...c, benefits: c.benefits.filter(b => b.id !== bid) }));
+  }
+
+  renderVals() {
+    const s = this.state;
+    const accent = this.props.accent || '#F26722';
+    const showCategory = this.props.showCategory !== false;
+    const rowPad = this.props.density === 'compact' ? '9px' : '15px';
+    const cards = s.cards;
+
+    // nav
+    const navDefs = [
+      { key: 'dashboard', label: '메인 대시보드', icon: '◧' },
+      { key: 'upload', label: '카드내역 입력', icon: '↥' },
+      { key: 'transactions', label: '사용내역 관리', icon: '≣' },
+      { key: 'settings', label: '카드 설정', icon: '⚙' },
+    ];
+    const navItems = navDefs.map(n => {
+      const active = s.screen === n.key;
+      return { ...n, onClick: this.go(n.key), bg: active ? '#FEF1E9' : 'transparent',
+        color: active ? accent : '#55554F', icoColor: active ? accent : '#B0B0AB',
+        weight: active ? 800 : 600 };
+    });
+
+    const titles = {
+      dashboard: ['실적 대시보드', '이번 달 각 카드의 실적 기준 충족 현황을 한눈에 확인하세요'],
+      upload: ['카드내역 입력', '카드사 이용내역 엑셀을 업로드하면 실적을 자동 판정합니다'],
+      transactions: ['카드별 사용내역 관리', '거래별 실적 포함 여부와 혜택 대상을 확인·수정하세요'],
+      settings: ['카드 설정', '카드 정보, 실적 기준, 산정 기간, 혜택 항목을 관리합니다'],
+    };
+    const [screenTitle, screenSubtitle] = titles[s.screen];
+
+    const monthOptions = [
+      { value: '2026-06', label: '2026년 6월' }, { value: '2026-05', label: '2026년 5월' },
+      { value: '2026-04', label: '2026년 4월' }, { value: '2026-03', label: '2026년 3월' },
+      { value: '2026-02', label: '2026년 2월' }, { value: '2026-01', label: '2026년 1월' },
+    ];
+
+    // dashboard cards
+    const enrich = cards.map(c => {
+      const pct = Math.round(c.recognized / c.threshold * 100);
+      const st = this.status(pct);
+      const gotBenefits = c.benefits.filter(b => b.got && b.got !== '0원' && b.got !== '0 P');
+      return { ...c, pct, st, gotBenefits, benefitAmt: c.benefits.reduce((a, b) => {
+        const n = parseInt(String(b.got).replace(/[^0-9]/g, '')) || 0;
+        return a + (String(b.got).includes('P') ? n : n); }, 0) };
+    });
+    const order = { under: 0, near: 1, achieved: 2 };
+    const sorted = [...enrich].sort((a, b) => order[a.st] - order[b.st] || a.pct - b.pct);
+
+    const badge = {
+      under: { label: '실적 미달', bg: accent, fg: '#fff', border: accent },
+      near: { label: '기준 근접', bg: '#FEF1E9', fg: '#C2601F', border: '#F6D2BC' },
+      achieved: { label: '달성 완료', bg: '#F2F1EE', fg: '#66655F', border: '#E6E5E1' },
+    };
+
+    const cardsView = sorted.map(c => {
+      const b = badge[c.st];
+      const remain = c.threshold - c.recognized;
+      return {
+        id: c.id, name: c.name, issuer: c.issuer, chip: c.chip, hex: c.hex,
+        recognizedFmt: this.won(c.recognized), thresholdFmt: this.won(c.threshold),
+        spendFmt: this.won(c.spend), benefitFmt: c.benefitAmt > 0 ? this.won(c.benefitAmt) : '0원',
+        benefitColor: c.benefitAmt > 0 ? accent : '#B4B4AF',
+        barPct: Math.min(100, c.pct), pctText: c.pct + '%',
+        barColor: c.st === 'achieved' ? '#C9C8C3' : accent,
+        statusLabel: b.label, badgeBg: b.bg, badgeFg: b.fg, badgeBorder: b.border,
+        stripColor: c.st === 'under' ? accent : 'transparent',
+        cardBorder: c.st === 'under' ? '#F3D3BF' : '#ECEBE8',
+        remainText: c.st === 'achieved' ? ('기준 초과 +' + this.won(c.recognized - c.threshold)) : ('기준까지 ' + this.won(remain) + ' 남음'),
+        remainColor: c.st === 'under' ? accent : (c.st === 'near' ? '#C2601F' : '#7A9A82'),
+        hasBenefits: c.gotBenefits.length > 0, noBenefits: c.gotBenefits.length === 0,
+        benefitList: c.gotBenefits, onOpen: this.openCard(c.id),
+      };
+    });
+
+    const totSpend = enrich.reduce((a, c) => a + c.spend, 0);
+    const totBenefit = enrich.reduce((a, c) => a + c.benefitAmt, 0);
+    const achievedN = enrich.filter(c => c.st === 'achieved').length;
+    const underN = enrich.filter(c => c.st === 'under').length;
+    const sum = { spend: this.won(totSpend), benefit: this.won(totBenefit),
+      achieved: achievedN, total: cards.length, under: underN };
+
+    // upload
+    const uploadCardChips = cards.map(c => {
+      const on = s.uploadCardId === c.id;
+      return { name: c.name, hex: c.hex, onSelect: this.selUpload(c.id),
+        bg: on ? '#FEF1E9' : '#fff', color: on ? accent : '#44443F',
+        border: on ? accent : '#E7E6E2' };
+    });
+    const uploadCard = cards.find(c => c.id === s.uploadCardId);
+    const runReady = !!s.uploadCardId;
+    const colMap = [
+      { excel: '이용일자', field: '거래일자', okLabel: '자동 인식', okColor: '#2E9E4F', okBg: '#EAF6EC' },
+      { excel: '가맹점명', field: '가맹점명', okLabel: '자동 인식', okColor: '#2E9E4F', okBg: '#EAF6EC' },
+      { excel: '이용금액', field: '금액', okLabel: '자동 인식', okColor: '#2E9E4F', okBg: '#EAF6EC' },
+      { excel: '할부개월', field: '결제방식', okLabel: '자동 인식', okColor: '#2E9E4F', okBg: '#EAF6EC' },
+      { excel: '이용구분', field: '(사용 안 함)', okLabel: '확인 필요', okColor: '#C2601F', okBg: '#FEF1E9' },
+    ];
+    const fieldOptions = ['거래일자', '가맹점명', '금액', '결제방식', '카테고리', '(사용 안 함)'];
+
+    // transactions
+    const txCard = cards.find(c => c.id === s.txCardId) || cards[0];
+    const txCardChips = cards.map(c => {
+      const on = s.txCardId === c.id;
+      return { name: c.name, hex: c.hex, onSelect: () => this.setState({ txCardId: c.id }),
+        bg: on ? accent : '#fff', color: on ? '#fff' : '#44443F',
+        border: on ? accent : '#E7E6E2' };
+    });
+    const allRows = (s.tx && s.tx[s.txCardId]) || [];
+    const benefitPlaces = txCard.benefits.map(b => b.place);
+    let filtered = allRows.filter(r => {
+      if (s.txStatus === 'in' && !r.included) return false;
+      if (s.txStatus === 'out' && r.included) return false;
+      if (s.txBenefit === 'yes' && !r.benefitItem) return false;
+      if (s.txBenefit === 'no' && r.benefitItem) return false;
+      if (s.txUnclassified && r.classified) return false;
+      if (s.txSearch && !r.merchant.toLowerCase().includes(s.txSearch.toLowerCase())) return false;
+      return true;
+    });
+    const txRows = filtered.map(r => {
+      const has = !!r.benefitItem;
+      return {
+        id: r.id, date: r.date, merchant: r.merchant, category: r.category,
+        amountFmt: this.won(r.amount), method: r.method,
+        trackBg: r.included ? accent : '#D9D8D4',
+        knobX: r.included ? 'translateX(18px)' : 'translateX(0)',
+        benefitValue: r.benefitItem || '해당 없음',
+        benefitOptions: ['해당 없음', ...benefitPlaces],
+        selBg: has ? '#FEF1E9' : '#fff', selColor: has ? '#C2601F' : '#8B8B86',
+        selBorder: has ? '#F6D2BC' : '#E4E3DF', selWeight: has ? 700 : 600,
+        srcLabel: !r.classified ? '미분류' : (r.source === 'manual' ? '수동 수정' : '자동 판정'),
+        srcBg: !r.classified ? '#FEF1E9' : (r.source === 'manual' ? '#EDF1FB' : '#F2F1EE'),
+        srcColor: !r.classified ? accent : (r.source === 'manual' ? '#3B62C4' : '#8B8B86'),
+        onToggle: () => this.toggleTx(r.id), onBenefit: (e) => this.setTxBenefit(r.id, e.target.value),
+      };
+    });
+    const inCount = allRows.filter(r => r.included).length;
+    const unclCount = allRows.filter(r => !r.classified).length;
+    const txCountLabel = '전체 ' + allRows.length + '건 · 실적 포함 ' + inCount + '건 · 미분류 ' + unclCount + '건';
+
+    // settings
+    const setCard = cards.find(c => c.id === s.settingsCardId) || cards[0];
+    const settingsCardList = cards.map(c => {
+      const on = s.settingsCardId === c.id;
+      return { name: c.name, issuer: c.issuer, hex: c.hex, onSelect: this.selSettings(c.id),
+        bg: on ? '#FEF1E9' : 'transparent', color: on ? accent : '#33332F' };
+    });
+    const swatchHexes = ['#16213E', '#1C1C1E', '#0A3FD6', '#0067AC', '#5B4B3A', '#C8102E', '#2E9E4F', '#F26722'];
+    const colorSwatches = swatchHexes.map(hex => ({ hex,
+      ring: setCard.hex === hex ? '#17171A' : 'transparent',
+      onPick: () => this.mutCard(c => ({ ...c, hex })) }));
+    const set = {
+      name: setCard.name, issuer: setCard.issuer, threshold: Number(setCard.threshold).toLocaleString('ko-KR'),
+      onName: (e) => this.mutCard(c => ({ ...c, name: e.target.value })),
+      onIssuer: (e) => this.mutCard(c => ({ ...c, issuer: e.target.value })),
+      onThreshold: (e) => { const n = parseInt(e.target.value.replace(/[^0-9]/g, '')) || 0; this.mutCard(c => ({ ...c, threshold: n })); },
+      benefits: setCard.benefits.map(b => ({
+        place: b.place, desc: b.desc,
+        onPlace: (e) => this.updBenefit(b.id, 'place', e.target.value),
+        onDesc: (e) => this.updBenefit(b.id, 'desc', e.target.value),
+        onToggle: () => this.updBenefit(b.id, 'inc', !b.inc),
+        onRemove: () => this.removeBenefit(b.id),
+        trackBg: b.inc ? accent : '#D9D8D4', knobX: b.inc ? 'translateX(16px)' : 'translateX(0)',
+        incColor: b.inc ? '#44443F' : '#A6A6A1',
+      })),
+    };
+    const pModes = [
+      { key: 'calendar', label: '매월 1일 ~ 말일', sub: '월력 기준 · 가장 일반적' },
+      { key: 'cycle', label: '전월 21일 ~ 당월 20일', sub: '카드 결제일 주기 기준' },
+      { key: 'custom', label: '직접 지정', sub: '시작일·종료일을 직접 설정' },
+    ];
+    const periodModes = pModes.map(p => {
+      const on = s.periodMode === p.key;
+      return { label: p.label, sub: p.sub, onPick: () => this.setState({ periodMode: p.key }),
+        border: on ? accent : '#EBEAE6', bg: on ? '#FEF6F1' : '#fff',
+        dotBorder: on ? accent : '#CFCEC9', dotFill: on ? accent : 'transparent' };
+    });
+    const dayOptions = Array.from({ length: 28 }, (_, i) => String(i + 1));
+
+    // history
+    const histMonths = ['1월', '2월', '3월', '4월', '5월', '6월'];
+    const seed = setCard.threshold;
+    const history = histMonths.map((m, i) => {
+      const factor = 0.55 + (Math.sin(i * 1.3 + (seed % 97) / 10) / 2 + 0.5) * 0.75;
+      const amt = Math.round(seed * factor / 1000) * 1000;
+      const achieved = amt >= setCard.threshold;
+      const pct = Math.min(120, Math.round(amt / setCard.threshold * 100));
+      return { month: m, amtShort: this.wonShort(amt) + '원', barH: Math.round(pct / 120 * 108) + 8,
+        barColor: achieved ? accent : '#DAD9D5', amtColor: achieved ? accent : '#9A9A95',
+        tag: achieved ? '달성' : '미달', tagColor: achieved ? '#fff' : '#8B8B86',
+        tagBg: achieved ? accent : '#EFEEEB' };
+    });
+
+    return {
+      accent, showCategory, rowPad, navItems,
+      screenTitle, screenSubtitle, month: s.month, monthOptions, onMonth: (e) => this.setState({ month: e.target.value }),
+      goUpload: this.go('upload'),
+      isDashboard: s.screen === 'dashboard', isUpload: s.screen === 'upload',
+      isTx: s.screen === 'transactions', isSettings: s.screen === 'settings',
+      cardsView, sum,
+      // upload
+      uploadStep0: s.uploadStep === 0, uploadStep1: s.uploadStep === 1,
+      uploadCardChips, dropBorder: runReady ? '#F0C6AC' : '#DEDDD8', dropBg: runReady ? '#FEFBF8' : '#FBFBFA',
+      uploadHint: runReady ? '선택한 카드: ' + (uploadCard ? uploadCard.name : '') : '먼저 위에서 카드를 선택하세요',
+      runBg: runReady ? accent : '#D7D6D1', runCursor: runReady ? 'pointer' : 'not-allowed',
+      onRunUpload: () => this.runUpload(), onResetUpload: () => this.resetUpload(), onSaveUpload: () => this.saveUpload(),
+      uploadDoneCard: uploadCard ? uploadCard.name : '', uploadRecognized: uploadCard ? this.won(uploadCard.recognized) : '198,000원',
+      colMap, fieldOptions,
+      // tx
+      txCardChips, txRows, txSearch: s.txSearch, onSearch: (e) => this.setState({ txSearch: e.target.value }),
+      txStatus: s.txStatus, onTxStatus: (e) => this.setState({ txStatus: e.target.value }),
+      txBenefit: s.txBenefit, onTxBenefit: (e) => this.setState({ txBenefit: e.target.value }),
+      onToggleUnclassified: () => this.setState({ txUnclassified: !s.txUnclassified }),
+      unclBg: s.txUnclassified ? '#FEF1E9' : '#fff', unclColor: s.txUnclassified ? accent : '#8B8B86',
+      unclBorder: s.txUnclassified ? '#F6D2BC' : '#E4E3DF',
+      unclCheckBg: s.txUnclassified ? accent : 'transparent', unclCheck: s.txUnclassified ? '✓' : '',
+      txCountLabel, txEmpty: txRows.length === 0,
+      // settings
+      settingsCardList, colorSwatches, set, periodModes, periodCustom: s.periodMode === 'custom',
+      dayOptions, onAddBenefit: () => this.addBenefit(), history,
+    };
+  }
+}
+</script>
+</body>
+</html>
