@@ -281,7 +281,11 @@ function computeDashboard() {
 }
 
 /* ===================== render: shell ===================== */
+let isComposing = false;
+let pendingRender = false;
+
 function render() {
+  if (isComposing) { pendingRender = true; return; }
   const focus = captureFocus();
   document.getElementById('app').innerHTML = renderShell();
   restoreFocus(focus);
@@ -766,6 +770,12 @@ function renderSettingsScreen() {
 /* ===================== event delegation ===================== */
 function setupDelegation() {
   const app = document.getElementById('app');
+
+  app.addEventListener('compositionstart', () => { isComposing = true; });
+  app.addEventListener('compositionend', () => {
+    isComposing = false;
+    if (pendingRender) { pendingRender = false; render(); }
+  });
 
   app.addEventListener('click', (e) => {
     const el = e.target.closest('[data-action]');
