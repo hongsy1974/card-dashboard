@@ -48,6 +48,11 @@ function monthLabel(ym) {
   const [y, m] = ym.split('-');
   return y + '년 ' + Number(m) + '월';
 }
+function prevMonthStr(ym) {
+  const [y, m] = ym.split('-').map(Number);
+  const d = new Date(y, m - 2, 1);
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+}
 function computeMonthOptions() {
   const set = new Set([currentMonthStr(), ...state.months]);
   return Array.from(set).sort().reverse().map(ym => ({ value: ym, label: monthLabel(ym) }));
@@ -191,15 +196,51 @@ function computeCardTotals(cardId, month) {
   return { spend, recognized };
 }
 
-function computeBenefitEarned(card, benefit, month) {
+function computeRawBenefitEarned(card, benefit, month) {
   const rows = benefit.place ? (state.tx[card.id] || []).filter(r =>
     String(r.date || '').slice(0, 7) === month && r.benefitItem === benefit.place
   ) : [];
   const matchedAmount = rows.reduce((a, r) => a + (Number(r.amount) || 0), 0);
   const rate = Number(benefit.rate) || 0;
-  const earned = Math.round(matchedAmount * rate / 100);
-  const gotFmt = benefit.benefitType === 'point' ? earned.toLocaleString('ko-KR') + ' P' : won(earned);
-  return { matchedAmount, earned, gotFmt };
+  return { matchedAmount, raw: Math.round(matchedAmount * rate / 100) };
+}
+
+function computeApplicableTier(card, month) {
+  const tiers = (card.tiers || []).filter(t => t.threshold !== '' && t.threshold != null);
+  if (tiers.length === 0) return { configured: false, cap: Infinity };
+  const prevSpend = computeCardTotals(card.id, prevMonthStr(month)).spend;
+  const sorted = tiers.slice().sort((a, b) => Number(a.threshold) - Number(b.threshold));
+  let applicable = null;
+  sorted.forEach(t => { if (prevSpend >= Number(t.threshold)) applicable = t; });
+  return { configured: true, cap: applicable ? (Number(applicable.cap) || 0) : 0, tier: applicable, prevSpend };
+}
+
+function formatEarned(benefit, earned) {
+  return benefit.benefitType === 'point' ? earned.toLocaleString('ko-KR') + ' P' : won(earned);
+}
+
+function computeCardBenefits(card, month) {
+  const benefits = card.benefits || [];
+  const tierInfo = computeApplicableTier(card, month);
+  const raws = benefits.map(b => ({ b, ...computeRawBenefitEarned(card, b, month) }));
+
+  if (!tierInfo.configured) {
+    return raws.map(({ b, matchedAmount, raw }) => ({ ...b, matchedAmount, earned: raw, gotFmt: formatEarned(b, raw) }));
+  }
+
+  if (card.tierCapMode === 'total') {
+    let remaining = tierInfo.cap;
+    return raws.map(({ b, matchedAmount, raw }) => {
+      const earned = Math.max(0, Math.min(raw, remaining));
+      remaining -= earned;
+      return { ...b, matchedAmount, earned, gotFmt: formatEarned(b, earned) };
+    });
+  }
+
+  return raws.map(({ b, matchedAmount, raw }) => {
+    const earned = Math.min(raw, tierInfo.cap);
+    return { ...b, matchedAmount, earned, gotFmt: formatEarned(b, earned) };
+  });
 }
 
 /* ===================== firestore: writes ===================== */
@@ -227,17 +268,19 @@ function updateCard(id, fields) {
   updateDoc(doc(db, 'cards', id), fields).catch(reportWriteError);
 }
 
-async function mutateBenefits(cardId, mutateFn) {
+async function mutateCardArray(cardId, fieldName, mutateFn) {
   if (!cardId) return;
   try {
     await runTransaction(db, async (tx) => {
       const ref = doc(db, 'cards', cardId);
       const snap = await tx.get(ref);
-      const current = (snap.data() || {}).benefits || [];
-      tx.update(ref, { benefits: mutateFn(current) });
+      const current = (snap.data() || {})[fieldName] || [];
+      tx.update(ref, { [fieldName]: mutateFn(current) });
     });
   } catch (err) { reportWriteError(err); }
 }
+function mutateBenefits(cardId, mutateFn) { return mutateCardArray(cardId, 'benefits', mutateFn); }
+function mutateTiers(cardId, mutateFn) { return mutateCardArray(cardId, 'tiers', mutateFn); }
 
 function addBenefit() {
   mutateBenefits(state.settingsCardId, (benefits) => [
@@ -250,6 +293,19 @@ function removeBenefit(bid) {
 }
 function updateBenefitField(bid, field, val) {
   mutateBenefits(state.settingsCardId, (benefits) => benefits.map(b => b.id === bid ? { ...b, [field]: val } : b));
+}
+
+function addTier() {
+  mutateTiers(state.settingsCardId, (tiers) => [...tiers, { id: 't' + newId(), threshold: '', cap: '' }]);
+}
+function removeTier(tid) {
+  mutateTiers(state.settingsCardId, (tiers) => tiers.filter(t => t.id !== tid));
+}
+function updateTierField(tid, field, val) {
+  mutateTiers(state.settingsCardId, (tiers) => tiers.map(t => t.id === tid ? { ...t, [field]: val } : t));
+}
+function setTierCapMode(mode) {
+  updateCard(state.settingsCardId, { tierCapMode: mode });
 }
 
 function updateTxRow(cardId, rowId, fields) {
@@ -342,7 +398,7 @@ function computeDashboard() {
   const enrich = cards.map(c => {
     const threshold = Number(c.threshold) || 0;
     const { spend, recognized } = computeCardTotals(c.id, state.month);
-    const benefits = (c.benefits || []).map(b => ({ ...b, ...computeBenefitEarned(c, b, state.month) }));
+    const benefits = computeCardBenefits(c, state.month);
     const pct = threshold > 0 ? Math.round(recognized / threshold * 100) : 0;
     const st = statusOf(pct);
     const gotBenefits = benefits.filter(b => b.earned > 0);
@@ -882,6 +938,30 @@ function renderSettingsScreen() {
       '<button class="add-benefit-btn" data-action="settings-add-benefit">+ 혜택 항목 추가</button>' +
     '</div>';
 
+  const tierMode = setCard.tierCapMode === 'total' ? 'total' : 'perItem';
+  const fmtAmt = (v) => (v === '' || v == null) ? '' : Number(v).toLocaleString('ko-KR');
+  const tiersHtml = (setCard.tiers || []).slice().sort((a, b) => Number(a.threshold || 0) - Number(b.threshold || 0)).map(t => {
+    return (
+      '<div class="tier-editor-row">' +
+        '<div class="amount-field"><input type="text" inputmode="numeric" placeholder="0" data-field="settings-tier-threshold-' + t.id + '" data-action="settings-tier-threshold" data-tier-id="' + t.id + '" value="' + fmtAmt(t.threshold) + '" /><span class="unit">원 이상</span></div>' +
+        '<div class="amount-field"><input type="text" inputmode="numeric" placeholder="0" data-field="settings-tier-cap-' + t.id + '" data-action="settings-tier-cap" data-tier-id="' + t.id + '" value="' + fmtAmt(t.cap) + '" /><span class="unit">원</span></div>' +
+        '<button class="remove-btn" data-action="settings-tier-remove" data-tier-id="' + t.id + '">×</button>' +
+      '</div>'
+    );
+  }).join('');
+
+  const tiers =
+    '<div class="panel">' +
+      '<div class="benefit-panel-head"><div><span class="settings-panel-title" style="margin-bottom:0;">실적 구간별 혜택 한도</span><span class="benefit-panel-hint">전월 카드 전체 사용액 구간에 따라 혜택 한도를 다르게 설정하세요 (구간이 없으면 한도가 적용되지 않습니다)</span></div></div>' +
+      '<div class="tier-mode-row">' +
+        '<button class="tier-mode-btn' + (tierMode === 'perItem' ? ' selected' : '') + '" data-action="settings-tier-mode" data-mode="perItem"><span>항목별 한도</span><span class="tier-mode-sub">혜택 항목 하나하나가 각각 한도까지 적립</span></button>' +
+        '<button class="tier-mode-btn' + (tierMode === 'total' ? ' selected' : '') + '" data-action="settings-tier-mode" data-mode="total"><span>전체 한도</span><span class="tier-mode-sub">모든 혜택 항목을 합쳐서 한도까지 적립</span></button>' +
+      '</div>' +
+      '<div class="tier-editor-header"><span>전월 실적 기준</span><span>혜택 한도</span><span></span></div>' +
+      '<div class="tier-editor-list">' + tiersHtml + '</div>' +
+      '<button class="add-benefit-btn" data-action="settings-add-tier">+ 구간 추가</button>' +
+    '</div>';
+
   const history =
     '<div class="panel">' +
       '<div class="settings-panel-title" style="margin-bottom:4px;">월별 실적 이력</div>' +
@@ -891,7 +971,7 @@ function renderSettingsScreen() {
 
   return (
     '<div class="settings-grid">' + sidebarHtml +
-      '<div class="settings-panels">' + basicInfo + period + benefits + history + '</div>' +
+      '<div class="settings-panels">' + basicInfo + period + benefits + tiers + history + '</div>' +
     '</div>'
   );
 }
@@ -954,6 +1034,9 @@ function setupDelegation() {
       }
       case 'settings-benefit-remove': removeBenefit(el.dataset.benefitId); break;
       case 'settings-add-benefit': addBenefit(); break;
+      case 'settings-tier-mode': setTierCapMode(el.dataset.mode); break;
+      case 'settings-tier-remove': removeTier(el.dataset.tierId); break;
+      case 'settings-add-tier': addTier(); break;
       case 'dismiss-error': state.cardsError = null; state.txError = null; state.writeError = null; render(); break;
       default: break;
     }
@@ -985,6 +1068,16 @@ function setupDelegation() {
         break;
       }
       case 'settings-benefit-keyword': updateBenefitField(el.dataset.benefitId, 'matchKeyword', el.value); break;
+      case 'settings-tier-threshold': {
+        const n = parseInt(el.value.replace(/[^0-9]/g, ''), 10) || 0;
+        updateTierField(el.dataset.tierId, 'threshold', n);
+        break;
+      }
+      case 'settings-tier-cap': {
+        const n = parseInt(el.value.replace(/[^0-9]/g, ''), 10) || 0;
+        updateTierField(el.dataset.tierId, 'cap', n);
+        break;
+      }
       default: break;
     }
   });
