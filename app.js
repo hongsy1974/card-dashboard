@@ -48,11 +48,6 @@ function monthLabel(ym) {
   const [y, m] = ym.split('-');
   return y + '년 ' + Number(m) + '월';
 }
-function prevMonthStr(ym) {
-  const [y, m] = ym.split('-').map(Number);
-  const d = new Date(y, m - 2, 1);
-  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
-}
 function computeMonthOptions() {
   const set = new Set([currentMonthStr(), ...state.months]);
   return Array.from(set).sort().reverse().map(ym => ({ value: ym, label: monthLabel(ym) }));
@@ -195,15 +190,10 @@ function computeCardTotals(cardId, month) {
   return { spend, recognized };
 }
 
-function computePrevPerformance(card, month) {
-  const auto = computeCardTotals(card.id, prevMonthStr(month)).recognized;
-  return auto > 0 ? auto : (Number(card.prevMonthManual) || 0);
-}
-
 function computeBenefitEarned(card, benefit, month) {
-  const prevPerf = computePrevPerformance(card, month);
+  const spend = computeCardTotals(card.id, month).spend;
   const rate = Number(benefit.rate) || 0;
-  const earned = Math.round(prevPerf * rate / 100);
+  const earned = Math.round(spend * rate / 100);
   const gotFmt = benefit.benefitType === 'point' ? earned.toLocaleString('ko-KR') + ' P' : won(earned);
   return { earned, gotFmt };
 }
@@ -341,8 +331,7 @@ function computeDashboard() {
   const cards = state.cards;
   const enrich = cards.map(c => {
     const threshold = Number(c.threshold) || 0;
-    const { spend } = computeCardTotals(c.id, state.month);
-    const recognized = computePrevPerformance(c, state.month);
+    const { spend, recognized } = computeCardTotals(c.id, state.month);
     const benefits = (c.benefits || []).map(b => ({ ...b, ...computeBenefitEarned(c, b, state.month) }));
     const pct = threshold > 0 ? Math.round(recognized / threshold * 100) : 0;
     const st = statusOf(pct);
@@ -635,7 +624,7 @@ function renderUploadScreen() {
     );
   }
 
-  const uploadRecognized = uploadCard ? won(computePrevPerformance(uploadCard, state.month)) : won(0);
+  const uploadRecognized = uploadCard ? won(computeCardTotals(uploadCard.id, state.month).recognized) : won(0);
   const mappingRows = COL_MAP.map(m => {
     const opts = FIELD_OPTIONS.map(f => '<option value="' + esc(f) + '"' + (f === m.field ? ' selected' : '') + '>' + esc(f) + '</option>').join('');
     return (
@@ -815,11 +804,6 @@ function renderSettingsScreen() {
     return '<button class="swatch" style="background:' + hex + ';border-color:' + ring + ';" data-action="settings-swatch" data-hex="' + hex + '"></button>';
   }).join('');
 
-  const prevAuto = computeCardTotals(setCard.id, prevMonthStr(state.month)).recognized;
-  const prevHint = prevAuto > 0
-    ? '자동 계산된 ' + monthLabel(prevMonthStr(state.month)) + ' 실적(' + won(prevAuto) + ')이 있어 이 값은 사용되지 않습니다.'
-    : monthLabel(prevMonthStr(state.month)) + ' 거래 내역이 없어 이 값이 전월 실적으로 사용됩니다.';
-
   const basicInfo =
     '<div class="panel">' +
       '<div class="settings-panel-title">카드 기본 정보</div>' +
@@ -828,7 +812,6 @@ function renderSettingsScreen() {
         '<label><span class="field-label">카드사</span><input class="text-input" type="text" data-field="settings-issuer" data-action="settings-issuer" value="' + esc(setCard.issuer) + '" /></label>' +
         '<label><span class="field-label">카드 색상</span><div class="swatch-row">' + swatchesHtml + '</div></label>' +
         '<label><span class="field-label">전월 실적 기준 금액</span><div class="amount-field"><input type="text" inputmode="numeric" data-field="settings-threshold" data-action="settings-threshold" value="' + Number(setCard.threshold || 0).toLocaleString('ko-KR') + '" /><span class="unit">원</span></div></label>' +
-        '<label><span class="field-label">전월 실적 금액 (수동)</span><div class="amount-field"><input type="text" inputmode="numeric" data-field="settings-prevmonth" data-action="settings-prevmonth" value="' + Number(setCard.prevMonthManual || 0).toLocaleString('ko-KR') + '" /><span class="unit">원</span></div><div class="field-hint">' + esc(prevHint) + '</div></label>' +
       '</div>' +
     '</div>';
 
@@ -979,11 +962,6 @@ function setupDelegation() {
       case 'settings-threshold': {
         const n = parseInt(el.value.replace(/[^0-9]/g, ''), 10) || 0;
         updateCard(state.settingsCardId, { threshold: n });
-        break;
-      }
-      case 'settings-prevmonth': {
-        const n = parseInt(el.value.replace(/[^0-9]/g, ''), 10) || 0;
-        updateCard(state.settingsCardId, { prevMonthManual: n });
         break;
       }
       case 'settings-benefit-place': updateBenefitField(el.dataset.benefitId, 'place', el.value); break;
