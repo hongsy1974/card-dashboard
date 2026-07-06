@@ -339,6 +339,7 @@ td { padding: var(--row-pad, 14px) 16px; }
 .settings-panel-title { font-size: 14px; font-weight: 800; margin-bottom: 18px; }
 .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 20px; }
 .field-label { display: block; font-size: 12px; font-weight: 700; color: var(--muted-5); margin-bottom: 7px; }
+.field-hint { font-size: 11px; color: var(--muted-9); font-weight: 500; margin-top: 6px; line-height: 1.4; }
 .text-input { width: 100%; border: 1px solid var(--border-input); border-radius: 9px; padding: 11px 13px; font-size: 13.5px; font-weight: 600; outline: none; color: var(--text); }
 .text-input:focus { border-color: var(--accent); }
 .swatch-row { display: flex; gap: 8px; }
