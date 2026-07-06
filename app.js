@@ -188,6 +188,17 @@ function computeCardTotals(cardId, month) {
   return { spend, recognized };
 }
 
+function computeBenefitEarned(cardId, benefit, month) {
+  const rows = benefit.place ? (state.tx[cardId] || []).filter(r =>
+    String(r.date || '').slice(0, 7) === month && r.benefitItem === benefit.place
+  ) : [];
+  const matchedAmount = rows.reduce((a, r) => a + (Number(r.amount) || 0), 0);
+  const rate = Number(benefit.rate) || 0;
+  const earned = Math.round(matchedAmount * rate / 100);
+  const gotFmt = benefit.benefitType === 'point' ? earned.toLocaleString('ko-KR') + ' P' : won(earned);
+  return { matchedAmount, earned, gotFmt };
+}
+
 /* ===================== firestore: writes ===================== */
 function reportWriteError(err) {
   console.error(err);
@@ -322,11 +333,11 @@ function computeDashboard() {
   const enrich = cards.map(c => {
     const threshold = Number(c.threshold) || 0;
     const { spend, recognized } = computeCardTotals(c.id, state.month);
-    const benefits = c.benefits || [];
+    const benefits = (c.benefits || []).map(b => ({ ...b, ...computeBenefitEarned(c.id, b, state.month) }));
     const pct = threshold > 0 ? Math.round(recognized / threshold * 100) : 0;
     const st = statusOf(pct);
-    const gotBenefits = benefits.filter(b => b.got && b.got !== '0원' && b.got !== '0 P');
-    const benefitAmt = benefits.reduce((a, b) => a + (parseInt(String(b.got).replace(/[^0-9]/g, ''), 10) || 0), 0);
+    const gotBenefits = benefits.filter(b => b.earned > 0);
+    const benefitAmt = benefits.reduce((a, b) => a + b.earned, 0);
     return { ...c, threshold, recognized, spend, benefits, pct, st, gotBenefits, benefitAmt };
   });
   const order = { under: 0, near: 1, achieved: 2 };
@@ -518,7 +529,7 @@ function renderDashboardScreen() {
   const cardsHtml = cardsView.map(c => {
     const benefitsBlock = c.hasBenefits
       ? '<div class="benefit-list">' + c.benefitList.map(b =>
-          '<div class="benefit-row"><span class="benefit-dot"></span><span class="benefit-desc">' + esc(benefitLabel(b)) + '</span><span class="benefit-got">' + esc(b.got) + '</span></div>'
+          '<div class="benefit-row"><span class="benefit-dot"></span><span class="benefit-desc">' + esc(benefitLabel(b)) + '</span><span class="benefit-got">' + esc(b.gotFmt) + '</span></div>'
         ).join('') + '</div>'
       : '<div class="benefit-empty">아직 획득한 혜택이 없어요 · 기준 달성 시 적용됩니다</div>';
 
