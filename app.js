@@ -123,7 +123,7 @@ const state = {
 function findCard(id) { return state.cards.find(c => c.id === id); }
 
 /* ===================== firestore: reads ===================== */
-let txUnsub = null;
+let txSubs = {};
 
 function subscribeCards() {
   const q = query(cardsCol, orderBy('createdAt', 'asc'));
@@ -159,21 +159,33 @@ function ensureSelection() {
   if (!findCard(state.txCardId)) state.txCardId = firstId;
   if (!findCard(state.settingsCardId)) state.settingsCardId = firstId;
   if (state.uploadCardId && !findCard(state.uploadCardId)) state.uploadCardId = '';
-  subscribeTx(state.txCardId);
+  subscribeAllTx();
 }
 
-function subscribeTx(cardId) {
-  if (txUnsub) { txUnsub(); txUnsub = null; }
-  if (!cardId) { render(); return; }
-  const q = query(collection(db, 'cards', cardId, 'transactions'), orderBy('date', 'asc'));
-  txUnsub = onSnapshot(q, (snap) => {
-    state.tx = { ...state.tx, [cardId]: snap.docs.map(d => ({ id: d.id, ...d.data() })) };
-    state.txError = null;
-    render();
-  }, (err) => {
-    state.txError = err && err.message ? err.message : String(err);
-    render();
+function subscribeAllTx() {
+  const currentIds = new Set(state.cards.map(c => c.id));
+  Object.keys(txSubs).forEach(id => {
+    if (!currentIds.has(id)) { txSubs[id](); delete txSubs[id]; delete state.tx[id]; }
   });
+  state.cards.forEach(c => {
+    if (txSubs[c.id]) return;
+    const q = query(collection(db, 'cards', c.id, 'transactions'), orderBy('date', 'asc'));
+    txSubs[c.id] = onSnapshot(q, (snap) => {
+      state.tx = { ...state.tx, [c.id]: snap.docs.map(d => ({ id: d.id, ...d.data() })) };
+      state.txError = null;
+      render();
+    }, (err) => {
+      state.txError = err && err.message ? err.message : String(err);
+      render();
+    });
+  });
+}
+
+function computeCardTotals(cardId, month) {
+  const rows = (state.tx[cardId] || []).filter(r => String(r.date || '').slice(0, 7) === month);
+  const spend = rows.reduce((a, r) => a + (Number(r.amount) || 0), 0);
+  const recognized = rows.filter(r => r.included).reduce((a, r) => a + (Number(r.amount) || 0), 0);
+  return { spend, recognized };
 }
 
 /* ===================== firestore: writes ===================== */
@@ -187,7 +199,7 @@ async function addCard() {
   try {
     const ref = await addDoc(cardsCol, {
       name: '새 카드', issuer: '', chip: '', hex: SWATCH_HEXES[0],
-      threshold: 300000, spend: 0, recognized: 0, benefits: [],
+      threshold: 300000, benefits: [],
       periodMode: 'calendar', customStartDay: '1', customEndDay: '1',
       createdAt: serverTimestamp(),
     });
@@ -233,7 +245,7 @@ function updateTxRow(cardId, rowId, fields) {
 
 /* ===================== actions ===================== */
 function setScreen(s) { state.screen = s; render(); }
-function openCard(id) { state.screen = 'transactions'; state.txCardId = id; subscribeTx(id); render(); }
+function openCard(id) { state.screen = 'transactions'; state.txCardId = id; render(); }
 
 function selectUploadCard(id) { state.uploadCardId = id; render(); }
 function setUploadFile(name) { state.uploadFileName = name || ''; render(); }
@@ -245,11 +257,10 @@ function saveUpload() {
   state.txCardId = state.uploadCardId;
   state.uploadStep = 0;
   state.uploadFileName = '';
-  subscribeTx(state.txCardId);
   render();
 }
 
-function selectTxCard(id) { state.txCardId = id; subscribeTx(id); render(); }
+function selectTxCard(id) { state.txCardId = id; render(); }
 function toggleTxRow(rowId) {
   const arr = state.tx[state.txCardId] || [];
   const row = arr.find(r => r.id === rowId);
@@ -310,8 +321,7 @@ function computeDashboard() {
   const cards = state.cards;
   const enrich = cards.map(c => {
     const threshold = Number(c.threshold) || 0;
-    const recognized = Number(c.recognized) || 0;
-    const spend = Number(c.spend) || 0;
+    const { spend, recognized } = computeCardTotals(c.id, state.month);
     const benefits = c.benefits || [];
     const pct = threshold > 0 ? Math.round(recognized / threshold * 100) : 0;
     const st = statusOf(pct);
@@ -603,7 +613,7 @@ function renderUploadScreen() {
     );
   }
 
-  const uploadRecognized = uploadCard ? won(uploadCard.recognized) : won(0);
+  const uploadRecognized = uploadCard ? won(computeCardTotals(uploadCard.id, state.month).recognized) : won(0);
   const mappingRows = COL_MAP.map(m => {
     const opts = FIELD_OPTIONS.map(f => '<option value="' + esc(f) + '"' + (f === m.field ? ' selected' : '') + '>' + esc(f) + '</option>').join('');
     return (
