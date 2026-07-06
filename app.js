@@ -96,7 +96,8 @@ function benefitTypeLabel(key) { return (BENEFIT_TYPES.find(t => t.key === key) 
 function benefitLabel(b) {
   const rate = b.rate === '' || b.rate == null ? null : Number(b.rate);
   const rateText = rate != null && !Number.isNaN(rate) ? rate + '% ' + benefitTypeLabel(b.benefitType) : benefitTypeLabel(b.benefitType);
-  return b.matchKeyword ? (b.matchKeyword + ' ' + rateText) : rateText;
+  const name = b.place ? (b.matchKeyword ? b.place + ' · ' + b.matchKeyword : b.place) : (b.matchKeyword || '');
+  return name ? (name + ' ' + rateText) : rateText;
 }
 
 /* ===================== state ===================== */
@@ -191,11 +192,14 @@ function computeCardTotals(cardId, month) {
 }
 
 function computeBenefitEarned(card, benefit, month) {
-  const spend = computeCardTotals(card.id, month).spend;
+  const rows = benefit.place ? (state.tx[card.id] || []).filter(r =>
+    String(r.date || '').slice(0, 7) === month && r.benefitItem === benefit.place
+  ) : [];
+  const matchedAmount = rows.reduce((a, r) => a + (Number(r.amount) || 0), 0);
   const rate = Number(benefit.rate) || 0;
-  const earned = Math.round(spend * rate / 100);
+  const earned = Math.round(matchedAmount * rate / 100);
   const gotFmt = benefit.benefitType === 'point' ? earned.toLocaleString('ko-KR') + ' P' : won(earned);
-  return { earned, gotFmt };
+  return { matchedAmount, earned, gotFmt };
 }
 
 /* ===================== firestore: writes ===================== */
