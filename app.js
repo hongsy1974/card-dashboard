@@ -40,6 +40,10 @@ function currentMonthStr() {
   const d = new Date();
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
 }
+function todayStr() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
 function monthLabel(ym) {
   const [y, m] = ym.split('-');
   return y + '년 ' + Number(m) + '월';
@@ -107,6 +111,7 @@ const state = {
   txBenefit: 'all',
   txUnclassified: false,
   txSearch: '',
+  newTx: { date: todayStr(), merchant: '', category: '', amount: '', method: '' },
   cards: [],
   cardsLoaded: false,
   cardsError: null,
@@ -251,6 +256,30 @@ function toggleTxRow(rowId) {
 function setTxRowBenefit(rowId, val) {
   const item = val === '해당 없음' ? '' : val;
   updateTxRow(state.txCardId, rowId, { benefitItem: item, source: 'manual', classified: true });
+}
+
+function updateNewTx(field, val) { state.newTx = { ...state.newTx, [field]: val }; }
+
+function addTxRow() {
+  const cardId = state.txCardId;
+  if (!cardId) return;
+  const n = state.newTx;
+  const amount = parseInt(String(n.amount).replace(/[^0-9]/g, ''), 10) || 0;
+  if (!n.merchant.trim() || !amount) return;
+  addDoc(collection(db, 'cards', cardId, 'transactions'), {
+    date: n.date || todayStr(),
+    merchant: n.merchant.trim(),
+    category: n.category.trim(),
+    amount,
+    method: n.method.trim() || '일시불',
+    included: true,
+    benefitItem: '',
+    classified: true,
+    source: 'manual',
+    createdAt: serverTimestamp(),
+  }).catch(reportWriteError);
+  state.newTx = { date: todayStr(), merchant: '', category: '', amount: '', method: '' };
+  render();
 }
 
 function selectSettingsCard(id) { state.settingsCardId = id; render(); }
@@ -638,6 +667,21 @@ function renderTxScreen() {
   const unclCount = allRows.filter(r => !r.classified).length;
   const countLabel = '전체 ' + allRows.length + '건 · 실적 포함 ' + inCount + '건 · 미분류 ' + unclCount + '건';
 
+  const n = state.newTx;
+  const addReady = !!n.merchant.trim() && !!(parseInt(String(n.amount).replace(/[^0-9]/g, ''), 10));
+  const addTxPanel =
+    '<div class="panel add-tx-panel">' +
+      '<div class="panel-title">거래 내역 직접 입력</div>' +
+      '<div class="add-tx-row">' +
+        '<input type="date" class="add-tx-input" data-field="newtx-date" data-action="newtx-date" value="' + esc(n.date) + '" />' +
+        '<input type="text" class="add-tx-input" placeholder="가맹점명" data-field="newtx-merchant" data-action="newtx-merchant" value="' + esc(n.merchant) + '" />' +
+        '<input type="text" class="add-tx-input" placeholder="카테고리" data-field="newtx-category" data-action="newtx-category" value="' + esc(n.category) + '" />' +
+        '<input type="text" class="add-tx-input" inputmode="numeric" placeholder="금액" data-field="newtx-amount" data-action="newtx-amount" value="' + esc(n.amount) + '" />' +
+        '<input type="text" class="add-tx-input" placeholder="결제방식 (예: 일시불)" data-field="newtx-method" data-action="newtx-method" value="' + esc(n.method) + '" />' +
+        '<button class="btn-run' + (addReady ? ' ready' : ' disabled') + '" data-action="add-tx-row">+ 추가</button>' +
+      '</div>' +
+    '</div>';
+
   const filterBar =
     '<div class="filter-bar">' +
       '<div class="search-box"><span class="search-icon">⌕</span><input type="text" placeholder="가맹점명 검색" data-field="tx-search" data-action="tx-search" value="' + esc(state.txSearch) + '" /></div>' +
@@ -696,7 +740,7 @@ function renderTxScreen() {
       emptyState +
     '</div>';
 
-  return '<div class="tx-chip-row">' + chips + '</div>' + filterBar + table;
+  return '<div class="tx-chip-row">' + chips + '</div>' + addTxPanel + filterBar + table;
 }
 
 /* ===================== screen: settings ===================== */
@@ -847,6 +891,7 @@ function setupDelegation() {
       case 'tx-select-card': selectTxCard(el.dataset.cardId); break;
       case 'tx-toggle-unclassified': state.txUnclassified = !state.txUnclassified; render(); break;
       case 'tx-row-toggle': toggleTxRow(el.dataset.rowId); break;
+      case 'add-tx-row': addTxRow(); break;
       case 'settings-select-card': selectSettingsCard(el.dataset.cardId); break;
       case 'settings-add-card': addCard(); break;
       case 'settings-swatch': updateCard(state.settingsCardId, { hex: el.dataset.hex }); break;
@@ -872,6 +917,11 @@ function setupDelegation() {
     const action = el.dataset.action;
     switch (action) {
       case 'tx-search': state.txSearch = el.value; render(); break;
+      case 'newtx-date': updateNewTx('date', el.value); render(); break;
+      case 'newtx-merchant': updateNewTx('merchant', el.value); render(); break;
+      case 'newtx-category': updateNewTx('category', el.value); render(); break;
+      case 'newtx-amount': updateNewTx('amount', el.value.replace(/[^0-9]/g, '')); render(); break;
+      case 'newtx-method': updateNewTx('method', el.value); render(); break;
       case 'settings-name': updateCard(state.settingsCardId, { name: el.value }); break;
       case 'settings-issuer': updateCard(state.settingsCardId, { issuer: el.value, chip: el.value }); break;
       case 'settings-threshold': {
