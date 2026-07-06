@@ -363,6 +363,7 @@ function computeDashboard() {
 /* ===================== render: shell ===================== */
 let isComposing = false;
 let pendingRender = false;
+let compositionGraceTimer = null;
 
 function render() {
   if (isComposing) { pendingRender = true; return; }
@@ -878,10 +879,22 @@ function renderSettingsScreen() {
 function setupDelegation() {
   const app = document.getElementById('app');
 
-  app.addEventListener('compositionstart', () => { isComposing = true; });
+  app.addEventListener('compositionstart', () => {
+    isComposing = true;
+    if (compositionGraceTimer) { clearTimeout(compositionGraceTimer); compositionGraceTimer = null; }
+  });
   app.addEventListener('compositionend', () => {
-    isComposing = false;
-    if (pendingRender) { pendingRender = false; render(); }
+    // Korean batchim attachment (e.g. 으 -> 을 when a trailing consonant is
+    // added) can briefly end and restart composition mid-word. Wait a short
+    // grace period before actually flushing — if a new compositionstart
+    // arrives first, we stay deferred instead of tearing down the input
+    // mid-syllable.
+    if (compositionGraceTimer) clearTimeout(compositionGraceTimer);
+    compositionGraceTimer = setTimeout(() => {
+      isComposing = false;
+      compositionGraceTimer = null;
+      if (pendingRender) { pendingRender = false; render(); }
+    }, 60);
   });
 
   app.addEventListener('click', (e) => {
