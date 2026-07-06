@@ -1,6 +1,6 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js';
 import {
-  getFirestore, collection, doc, addDoc, updateDoc, setDoc, onSnapshot, query, orderBy, serverTimestamp,
+  getFirestore, collection, doc, addDoc, updateDoc, setDoc, onSnapshot, query, orderBy, serverTimestamp, runTransaction,
 } from 'https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js';
 
 /* ===================== firebase ===================== */
@@ -201,26 +201,29 @@ function updateCard(id, fields) {
   updateDoc(doc(db, 'cards', id), fields).catch(reportWriteError);
 }
 
-function updateBenefits(id, benefits) {
-  if (!id) return;
-  updateDoc(doc(db, 'cards', id), { benefits }).catch(reportWriteError);
+async function mutateBenefits(cardId, mutateFn) {
+  if (!cardId) return;
+  try {
+    await runTransaction(db, async (tx) => {
+      const ref = doc(db, 'cards', cardId);
+      const snap = await tx.get(ref);
+      const current = (snap.data() || {}).benefits || [];
+      tx.update(ref, { benefits: mutateFn(current) });
+    });
+  } catch (err) { reportWriteError(err); }
 }
 
 function addBenefit() {
-  const card = findCard(state.settingsCardId);
-  if (!card) return;
-  const benefits = [...(card.benefits || []), { id: 'b' + newId(), place: '', benefitType: 'discount', rate: '', matchKeyword: '', got: '0원', inc: true }];
-  updateBenefits(card.id, benefits);
+  mutateBenefits(state.settingsCardId, (benefits) => [
+    ...benefits,
+    { id: 'b' + newId(), place: '', benefitType: 'discount', rate: '', matchKeyword: '', got: '0원', inc: true },
+  ]);
 }
 function removeBenefit(bid) {
-  const card = findCard(state.settingsCardId);
-  if (!card) return;
-  updateBenefits(card.id, (card.benefits || []).filter(b => b.id !== bid));
+  mutateBenefits(state.settingsCardId, (benefits) => benefits.filter(b => b.id !== bid));
 }
 function updateBenefitField(bid, field, val) {
-  const card = findCard(state.settingsCardId);
-  if (!card) return;
-  updateBenefits(card.id, (card.benefits || []).map(b => b.id === bid ? { ...b, [field]: val } : b));
+  mutateBenefits(state.settingsCardId, (benefits) => benefits.map(b => b.id === bid ? { ...b, [field]: val } : b));
 }
 
 function updateTxRow(cardId, rowId, fields) {
