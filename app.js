@@ -206,7 +206,9 @@ function computeRawBenefitEarned(card, benefit, month) {
 }
 
 function computeApplicableTier(card, month) {
-  const tiers = (card.tiers || []).filter(t => t.threshold !== '' && t.threshold != null);
+  const tiers = (card.tiers || []).filter(t =>
+    t.threshold !== '' && t.threshold != null && t.cap !== '' && t.cap != null
+  );
   if (tiers.length === 0) return { configured: false, cap: Infinity };
   const prevSpend = computeCardTotals(card.id, prevMonthStr(month)).spend;
   const sorted = tiers.slice().sort((a, b) => Number(a.threshold) - Number(b.threshold));
