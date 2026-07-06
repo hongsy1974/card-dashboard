@@ -1,6 +1,6 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js';
 import {
-  getFirestore, collection, doc, addDoc, updateDoc, setDoc, onSnapshot, query, orderBy, serverTimestamp, runTransaction,
+  getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, setDoc, onSnapshot, query, orderBy, serverTimestamp, runTransaction,
 } from 'https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js';
 
 /* ===================== firebase ===================== */
@@ -255,6 +255,12 @@ function updateBenefitField(bid, field, val) {
 function updateTxRow(cardId, rowId, fields) {
   if (!cardId || !rowId) return;
   updateDoc(doc(db, 'cards', cardId, 'transactions', rowId), fields).catch(reportWriteError);
+}
+
+function deleteTxRow(cardId, rowId) {
+  if (!cardId || !rowId) return;
+  if (!window.confirm('이 거래 내역을 삭제할까요?')) return;
+  deleteDoc(doc(db, 'cards', cardId, 'transactions', rowId)).catch(reportWriteError);
 }
 
 /* ===================== actions ===================== */
@@ -751,6 +757,7 @@ function renderTxScreen() {
         '<td class="td-toggle"><button class="toggle-switch" style="background:' + trackBg + ';" data-action="tx-row-toggle" data-row-id="' + r.id + '"><span class="toggle-knob" style="transform:' + knobX + ';"></span></button></td>' +
         '<td><select class="benefit-select" style="background:' + selBg + ';color:' + selColor + ';border-color:' + selBorder + ';font-weight:' + selWeight + ';" data-action="tx-row-benefit" data-row-id="' + r.id + '">' + benefitOptsHtml + '</select></td>' +
         '<td class="td-source"><span class="source-badge" style="background:' + srcBg + ';color:' + srcColor + ';">' + srcLabel + '</span></td>' +
+        '<td class="td-delete"><button class="remove-btn" data-action="tx-row-delete" data-row-id="' + r.id + '">×</button></td>' +
       '</tr>'
     );
   }).join('');
@@ -762,7 +769,7 @@ function renderTxScreen() {
   const table =
     '<div class="table-wrap" style="--row-pad:' + ROW_PAD + ';">' +
       '<table>' +
-        '<thead><tr><th>거래일자</th><th>가맹점명</th>' + catHeader + '<th style="text-align:right;">금액</th><th>결제방식</th><th style="text-align:center;">실적 포함</th><th>혜택 항목</th><th style="text-align:center;">판정</th></tr></thead>' +
+        '<thead><tr><th>거래일자</th><th>가맹점명</th>' + catHeader + '<th style="text-align:right;">금액</th><th>결제방식</th><th style="text-align:center;">실적 포함</th><th>혜택 항목</th><th style="text-align:center;">판정</th><th></th></tr></thead>' +
         '<tbody>' + rowsHtml + '</tbody>' +
       '</table>' +
       emptyState +
@@ -931,6 +938,7 @@ function setupDelegation() {
       case 'tx-select-card': selectTxCard(el.dataset.cardId); break;
       case 'tx-toggle-unclassified': state.txUnclassified = !state.txUnclassified; render(); break;
       case 'tx-row-toggle': toggleTxRow(el.dataset.rowId); break;
+      case 'tx-row-delete': deleteTxRow(state.txCardId, el.dataset.rowId); break;
       case 'add-tx-row': addTxRow(); break;
       case 'settings-select-card': selectSettingsCard(el.dataset.cardId); break;
       case 'settings-add-card': addCard(); break;
