@@ -90,6 +90,8 @@ const BENEFIT_TYPES = [
   { key: 'discount', label: '할인율' },
   { key: 'point', label: '적립률' },
 ];
+
+const METHOD_OPTIONS = ['일시불', '할부 2개월', '할부 3개월', '할부 6개월', '할부 12개월', '체크'];
 function benefitTypeLabel(key) { return (BENEFIT_TYPES.find(t => t.key === key) || BENEFIT_TYPES[0]).label; }
 function benefitLabel(b) {
   const rate = b.rate === '' || b.rate == null ? null : Number(b.rate);
@@ -111,7 +113,7 @@ const state = {
   txBenefit: 'all',
   txUnclassified: false,
   txSearch: '',
-  newTx: { date: todayStr(), merchant: '', category: '', amount: '', method: '' },
+  newTx: { date: todayStr(), merchant: '', category: '', amount: '', method: METHOD_OPTIONS[0] },
   cards: [],
   cardsLoaded: false,
   cardsError: null,
@@ -702,7 +704,7 @@ function renderTxScreen() {
         '<input type="text" class="add-tx-input" placeholder="가맹점명" data-field="newtx-merchant" data-action="newtx-merchant" value="' + esc(n.merchant) + '" />' +
         '<input type="text" class="add-tx-input" placeholder="카테고리" data-field="newtx-category" data-action="newtx-category" value="' + esc(n.category) + '" />' +
         '<input type="text" class="add-tx-input" inputmode="numeric" placeholder="금액" data-field="newtx-amount" data-action="newtx-amount" value="' + esc(n.amount) + '" />' +
-        '<input type="text" class="add-tx-input" placeholder="결제방식 (예: 일시불)" data-field="newtx-method" data-action="newtx-method" value="' + esc(n.method) + '" />' +
+        '<select class="add-tx-input" data-action="newtx-method">' + METHOD_OPTIONS.map(m => '<option value="' + esc(m) + '"' + (m === n.method ? ' selected' : '') + '>' + esc(m) + '</option>').join('') + '</select>' +
         '<button class="btn-run' + (addReady ? ' ready' : ' disabled') + '" data-action="add-tx-row">+ 추가</button>' +
       '</div>' +
     '</div>';
@@ -958,7 +960,6 @@ function setupDelegation() {
       case 'newtx-merchant': updateNewTx('merchant', el.value); render(); break;
       case 'newtx-category': updateNewTx('category', el.value); render(); break;
       case 'newtx-amount': updateNewTx('amount', el.value.replace(/[^0-9]/g, '')); render(); break;
-      case 'newtx-method': updateNewTx('method', el.value); render(); break;
       case 'settings-name': updateCard(state.settingsCardId, { name: el.value }); break;
       case 'settings-issuer': updateCard(state.settingsCardId, { issuer: el.value, chip: el.value }); break;
       case 'settings-threshold': {
@@ -988,6 +989,7 @@ function setupDelegation() {
       case 'tx-status': state.txStatus = el.value; render(); break;
       case 'tx-benefit': state.txBenefit = el.value; render(); break;
       case 'tx-row-benefit': setTxRowBenefit(el.dataset.rowId, el.value); break;
+      case 'newtx-method': updateNewTx('method', el.value); render(); break;
       case 'settings-custom-start': updateCard(state.settingsCardId, { customStartDay: el.value }); break;
       case 'settings-custom-end': updateCard(state.settingsCardId, { customEndDay: el.value }); break;
       case 'settings-benefit-type': updateBenefitField(el.dataset.benefitId, 'benefitType', el.value); break;
