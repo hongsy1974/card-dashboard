@@ -403,7 +403,7 @@ function computeDashboard() {
     const threshold = Number(c.threshold) || 0;
     const { spend, recognized } = computeCardTotals(c.id, state.month);
     const { items: benefits, tierInfo } = computeCardBenefits(c, state.month);
-    const pct = threshold > 0 ? Math.round(recognized / threshold * 100) : 0;
+    const pct = threshold > 0 ? Math.round(recognized / threshold * 100) : 100;
     const st = statusOf(pct);
     const gotBenefits = benefits.filter(b => b.earned > 0);
     const benefitAmt = benefits.reduce((a, b) => a + b.earned, 0);
