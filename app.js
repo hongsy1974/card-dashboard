@@ -225,24 +225,26 @@ function computeCardBenefits(card, month) {
   const benefits = card.benefits || [];
   const tierInfo = computeApplicableTier(card, month);
   const raws = benefits.map(b => ({ b, ...computeRawBenefitEarned(card, b, month) }));
+  const perItemCapMode = tierInfo.configured && card.tierCapMode !== 'total';
 
+  let items;
   if (!tierInfo.configured) {
-    return raws.map(({ b, matchedAmount, raw }) => ({ ...b, matchedAmount, earned: raw, gotFmt: formatEarned(b, raw) }));
-  }
-
-  if (card.tierCapMode === 'total') {
+    items = raws.map(({ b, matchedAmount, raw }) => ({ ...b, matchedAmount, earned: raw, gotFmt: formatEarned(b, raw) }));
+  } else if (card.tierCapMode === 'total') {
     let remaining = tierInfo.cap;
-    return raws.map(({ b, matchedAmount, raw }) => {
+    items = raws.map(({ b, matchedAmount, raw }) => {
       const earned = Math.max(0, Math.min(raw, remaining));
       remaining -= earned;
       return { ...b, matchedAmount, earned, gotFmt: formatEarned(b, earned) };
     });
+  } else {
+    items = raws.map(({ b, matchedAmount, raw }) => {
+      const earned = Math.min(raw, tierInfo.cap);
+      const gotFmt = formatEarned(b, earned) + ' · 한도 ' + formatEarned(b, tierInfo.cap);
+      return { ...b, matchedAmount, earned, gotFmt };
+    });
   }
-
-  return raws.map(({ b, matchedAmount, raw }) => {
-    const earned = Math.min(raw, tierInfo.cap);
-    return { ...b, matchedAmount, earned, gotFmt: formatEarned(b, earned) };
-  });
+  return { items, tierInfo, perItemCapMode };
 }
 
 /* ===================== firestore: writes ===================== */
@@ -400,12 +402,14 @@ function computeDashboard() {
   const enrich = cards.map(c => {
     const threshold = Number(c.threshold) || 0;
     const { spend, recognized } = computeCardTotals(c.id, state.month);
-    const benefits = computeCardBenefits(c, state.month);
+    const { items: benefits, tierInfo } = computeCardBenefits(c, state.month);
     const pct = threshold > 0 ? Math.round(recognized / threshold * 100) : 0;
     const st = statusOf(pct);
     const gotBenefits = benefits.filter(b => b.earned > 0);
     const benefitAmt = benefits.reduce((a, b) => a + b.earned, 0);
-    return { ...c, threshold, recognized, spend, benefits, pct, st, gotBenefits, benefitAmt };
+    const totalCapNote = (tierInfo.configured && c.tierCapMode === 'total')
+      ? ' (한도 ' + won(tierInfo.cap) + ')' : '';
+    return { ...c, threshold, recognized, spend, benefits, pct, st, gotBenefits, benefitAmt, totalCapNote };
   });
   const order = { under: 0, near: 1, achieved: 2 };
   const sorted = [...enrich].sort((a, b) => order[a.st] - order[b.st] || a.pct - b.pct);
@@ -426,6 +430,7 @@ function computeDashboard() {
       remainColor: c.st === 'under' ? ACCENT : (c.st === 'near' ? '#C2601F' : '#7A9A82'),
       hasBenefits: c.gotBenefits.length > 0,
       benefitList: c.gotBenefits,
+      totalCapNote: c.totalCapNote,
     };
   });
   const totSpend = enrich.reduce((a, c) => a + c.spend, 0);
@@ -624,7 +629,7 @@ function renderDashboardScreen() {
           '<div class="perf-divider"></div>' +
           '<div class="ministat-row">' +
             '<div><div class="ministat-label">이번 달 사용</div><div class="ministat-value">' + c.spendFmt + '</div></div>' +
-            '<div><div class="ministat-label">획득 혜택</div><div class="ministat-value" style="color:' + c.benefitColor + ';">' + c.benefitFmt + '</div></div>' +
+            '<div><div class="ministat-label">획득 혜택<span class="ministat-cap">' + esc(c.totalCapNote) + '</span></div><div class="ministat-value" style="color:' + c.benefitColor + ';">' + c.benefitFmt + '</div></div>' +
           '</div>' +
           '<div class="benefit-block">' + benefitsBlock + '</div>' +
           '<div class="perf-cta">상세 내역 보기 <span style="margin-left:4px;">→</span></div>' +
