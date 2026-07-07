@@ -55,6 +55,12 @@ function prevMonthStr(ym) {
 }
 function computeMonthOptions() {
   const set = new Set([currentMonthStr(), ...state.months]);
+  Object.values(state.tx).forEach(rows => {
+    (rows || []).forEach(r => {
+      const ym = String(r.date || '').slice(0, 7);
+      if (ym.length === 7) set.add(ym);
+    });
+  });
   return Array.from(set).sort().reverse().map(ym => ({ value: ym, label: monthLabel(ym) }));
 }
 
