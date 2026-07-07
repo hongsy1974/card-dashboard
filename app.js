@@ -40,6 +40,9 @@ function currentMonthStr() {
   const d = new Date();
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
 }
+function defaultTxDate() {
+  return state.month === currentMonthStr() ? todayStr() : state.month + '-01';
+}
 function todayStr() {
   const d = new Date();
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
@@ -755,8 +758,9 @@ function renderTxScreen() {
   }).join('');
 
   const allRows = (state.tx && state.tx[txCard.id]) || [];
+  const monthRows = allRows.filter(r => String(r.date || '').slice(0, 7) === state.month);
   const benefitPlaces = (txCard.benefits || []).map(b => b.place);
-  const filtered = allRows.filter(r => {
+  const filtered = monthRows.filter(r => {
     if (state.txStatus === 'in' && !r.included) return false;
     if (state.txStatus === 'out' && r.included) return false;
     if (state.txBenefit === 'yes' && !r.benefitItem) return false;
@@ -766,9 +770,9 @@ function renderTxScreen() {
     return true;
   });
 
-  const inCount = allRows.filter(r => r.included).length;
-  const unclCount = allRows.filter(r => !r.classified).length;
-  const countLabel = '전체 ' + allRows.length + '건 · 실적 포함 ' + inCount + '건 · 미분류 ' + unclCount + '건';
+  const inCount = monthRows.filter(r => r.included).length;
+  const unclCount = monthRows.filter(r => !r.classified).length;
+  const countLabel = '전체 ' + monthRows.length + '건 · 실적 포함 ' + inCount + '건 · 미분류 ' + unclCount + '건';
 
   const n = state.newTx;
   const addReady = !!n.merchant.trim() && !!(parseInt(String(n.amount).replace(/[^0-9]/g, ''), 10));
@@ -831,9 +835,10 @@ function renderTxScreen() {
     );
   }).join('');
 
-  const emptyState = filtered.length === 0
-    ? '<div class="empty-state">' + (allRows.length === 0 ? '이 카드에는 아직 거래 내역이 없습니다.' : '조건에 맞는 거래 내역이 없습니다.') + '</div>'
-    : '';
+  const emptyMsg = allRows.length === 0
+    ? '이 카드에는 아직 거래 내역이 없습니다.'
+    : (monthRows.length === 0 ? '이 달에는 거래 내역이 없습니다.' : '조건에 맞는 거래 내역이 없습니다.');
+  const emptyState = filtered.length === 0 ? '<div class="empty-state">' + emptyMsg + '</div>' : '';
 
   const table =
     '<div class="table-wrap" style="--row-pad:' + ROW_PAD + ';">' +
@@ -1100,7 +1105,7 @@ function setupDelegation() {
     if (!el) return;
     const action = el.dataset.action;
     switch (action) {
-      case 'month-change': state.month = el.value; render(); break;
+      case 'month-change': state.month = el.value; state.newTx.date = defaultTxDate(); render(); break;
       case 'tx-status': state.txStatus = el.value; render(); break;
       case 'tx-benefit': state.txBenefit = el.value; render(); break;
       case 'tx-row-benefit': setTxRowBenefit(el.dataset.rowId, el.value); break;
