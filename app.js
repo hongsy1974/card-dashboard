@@ -757,6 +757,13 @@ function renderTxScreen() {
     );
   }).join('');
 
+  const cardMonthTotals = computeCardTotals(txCard.id, state.month);
+  const topStats =
+    '<div class="tx-top-stats">' +
+      '<div class="tx-stat-box"><span class="tx-stat-label">실적금액</span><span class="tx-stat-value">' + won(cardMonthTotals.recognized) + '</span></div>' +
+      '<div class="tx-stat-box"><span class="tx-stat-label">사용금액</span><span class="tx-stat-value">' + won(cardMonthTotals.spend) + '</span></div>' +
+    '</div>';
+
   const allRows = (state.tx && state.tx[txCard.id]) || [];
   const monthRows = allRows.filter(r => String(r.date || '').slice(0, 7) === state.month);
   const benefitPlaces = (txCard.benefits || []).map(b => b.place);
@@ -849,7 +856,7 @@ function renderTxScreen() {
       emptyState +
     '</div>';
 
-  return '<div class="tx-chip-row">' + chips + '</div>' + addTxPanel + filterBar + table;
+  return '<div class="tx-chip-row"><div class="tx-chip-list">' + chips + '</div>' + topStats + '</div>' + addTxPanel + filterBar + table;
 }
 
 /* ===================== screen: settings ===================== */
