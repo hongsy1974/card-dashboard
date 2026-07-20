@@ -230,24 +230,30 @@ function formatEarned(benefit, earned) {
   return benefit.benefitType === 'point' ? earned.toLocaleString('ko-KR') + ' P' : won(earned);
 }
 
-function hasFixedCap(b) {
-  return b.fixedCapThreshold !== '' && b.fixedCapThreshold != null && b.fixedCapAmount !== '' && b.fixedCapAmount != null;
+function computeApplicableItemTier(benefit, prevSpend) {
+  const tiers = (benefit.itemTiers || []).filter(t =>
+    t.threshold !== '' && t.threshold != null && t.cap !== '' && t.cap != null
+  );
+  if (tiers.length === 0) return null;
+  const sorted = tiers.slice().sort((a, b) => Number(a.threshold) - Number(b.threshold));
+  let applicable = null;
+  sorted.forEach(t => { if (prevSpend >= Number(t.threshold)) applicable = t; });
+  return { cap: applicable ? (Number(applicable.cap) || 0) : 0 };
 }
 
 function computeCardBenefits(card, month) {
   const benefits = card.benefits || [];
   const tierInfo = computeApplicableTier(card, month);
   const prevSpend = computeCardTotals(card.id, prevMonthStr(month)).spend;
-  const raws = benefits.map(b => ({ b, ...computeRawBenefitEarned(card, b, month) }));
+  const raws = benefits.map(b => ({ b, ...computeRawBenefitEarned(card, b, month), itemTier: computeApplicableItemTier(b, prevSpend) }));
   const perItemCapMode = tierInfo.configured && card.tierCapMode !== 'total';
 
-  const fixedRaws = raws.filter(r => hasFixedCap(r.b));
-  const tieredRaws = raws.filter(r => !hasFixedCap(r.b));
+  const ownTierRaws = raws.filter(r => r.itemTier);
+  const tieredRaws = raws.filter(r => !r.itemTier);
 
-  const fixedResults = fixedRaws.map(({ b, matchedAmount, raw }) => {
-    const cap = prevSpend >= Number(b.fixedCapThreshold) ? (Number(b.fixedCapAmount) || 0) : 0;
-    const earned = Math.min(raw, cap);
-    const gotFmt = formatEarned(b, earned) + ' · 한도 ' + formatEarned(b, cap);
+  const ownTierResults = ownTierRaws.map(({ b, matchedAmount, raw, itemTier }) => {
+    const earned = Math.min(raw, itemTier.cap);
+    const gotFmt = formatEarned(b, earned) + ' · 한도 ' + formatEarned(b, itemTier.cap);
     return { ...b, matchedAmount, earned, gotFmt };
   });
 
@@ -269,7 +275,7 @@ function computeCardBenefits(card, month) {
     });
   }
 
-  const resultById = new Map([...fixedResults, ...tieredResults].map(item => [item.id, item]));
+  const resultById = new Map([...ownTierResults, ...tieredResults].map(item => [item.id, item]));
   const items = benefits.map(b => resultById.get(b.id));
   return { items, tierInfo, perItemCapMode };
 }
@@ -316,7 +322,7 @@ function mutateTiers(cardId, mutateFn) { return mutateCardArray(cardId, 'tiers',
 function addBenefit() {
   mutateBenefits(state.settingsCardId, (benefits) => [
     ...benefits,
-    { id: 'b' + newId(), place: '', benefitType: 'discount', rate: '', matchKeyword: '', got: '0원', inc: true, fixedCapThreshold: '', fixedCapAmount: '' },
+    { id: 'b' + newId(), place: '', benefitType: 'discount', rate: '', matchKeyword: '', got: '0원', inc: true, itemTiers: [] },
   ]);
 }
 function removeBenefit(bid) {
@@ -324,6 +330,21 @@ function removeBenefit(bid) {
 }
 function updateBenefitField(bid, field, val) {
   mutateBenefits(state.settingsCardId, (benefits) => benefits.map(b => b.id === bid ? { ...b, [field]: val } : b));
+}
+function addItemTier(benefitId) {
+  mutateBenefits(state.settingsCardId, (benefits) => benefits.map(b =>
+    b.id === benefitId ? { ...b, itemTiers: [...(b.itemTiers || []), { id: 'it' + newId(), threshold: '', cap: '' }] } : b
+  ));
+}
+function removeItemTier(benefitId, tierId) {
+  mutateBenefits(state.settingsCardId, (benefits) => benefits.map(b =>
+    b.id === benefitId ? { ...b, itemTiers: (b.itemTiers || []).filter(t => t.id !== tierId) } : b
+  ));
+}
+function updateItemTierField(benefitId, tierId, field, val) {
+  mutateBenefits(state.settingsCardId, (benefits) => benefits.map(b =>
+    b.id === benefitId ? { ...b, itemTiers: (b.itemTiers || []).map(t => t.id === tierId ? { ...t, [field]: val } : t) } : b
+  ));
 }
 
 function addTier() {
@@ -970,10 +991,18 @@ function renderSettingsScreen() {
           '<span class="mini-switch' + (b.inc ? ' on' : '') + '"><span class="mini-switch-knob" style="transform:' + (b.inc ? 'translateX(16px)' : 'translateX(0)') + ';"></span></span>실적 포함' +
         '</button>' +
         '<button class="remove-btn" data-action="settings-benefit-remove" data-benefit-id="' + b.id + '">×</button>' +
-        '<div class="benefit-fixedcap-row">' +
-          '<span class="benefit-fixedcap-label">고정 한도<span class="benefit-fixedcap-hint">설정 시 실적 구간과 무관하게 이 항목만 고정 한도 적용</span></span>' +
-          '<div class="amount-field small"><input type="text" inputmode="numeric" placeholder="0" data-field="settings-benefit-fixedcap-th-' + b.id + '" data-action="settings-benefit-fixedcap-threshold" data-benefit-id="' + b.id + '" value="' + fmtAmt(b.fixedCapThreshold) + '" /><span class="unit">원 이상</span></div>' +
-          '<div class="amount-field small"><input type="text" inputmode="numeric" placeholder="0" data-field="settings-benefit-fixedcap-amt-' + b.id + '" data-action="settings-benefit-fixedcap-amount" data-benefit-id="' + b.id + '" value="' + fmtAmt(b.fixedCapAmount) + '" /><span class="unit">원</span></div>' +
+        '<div class="benefit-itemtier-row">' +
+          '<span class="benefit-fixedcap-label">항목별 실적 구간 한도<span class="benefit-fixedcap-hint">이 항목만 별도의 실적 구간별 한도를 적용합니다 (비워두면 카드 전체 구간 한도를 따름)</span></span>' +
+          '<div class="benefit-itemtier-list">' +
+            (b.itemTiers || []).map(t =>
+              '<div class="benefit-itemtier-entry">' +
+                '<div class="amount-field small"><input type="text" inputmode="numeric" placeholder="0" data-field="settings-itemtier-th-' + t.id + '" data-action="settings-itemtier-threshold" data-benefit-id="' + b.id + '" data-tier-id="' + t.id + '" value="' + fmtAmt(t.threshold) + '" /><span class="unit">원 이상</span></div>' +
+                '<div class="amount-field small"><input type="text" inputmode="numeric" placeholder="0" data-field="settings-itemtier-cap-' + t.id + '" data-action="settings-itemtier-cap" data-benefit-id="' + b.id + '" data-tier-id="' + t.id + '" value="' + fmtAmt(t.cap) + '" /><span class="unit">원</span></div>' +
+                '<button class="remove-btn small" data-action="settings-itemtier-remove" data-benefit-id="' + b.id + '" data-tier-id="' + t.id + '">×</button>' +
+              '</div>'
+            ).join('') +
+          '</div>' +
+          '<button class="add-itemtier-btn" data-action="settings-add-itemtier" data-benefit-id="' + b.id + '">+ 구간 추가</button>' +
         '</div>' +
       '</div>'
     );
@@ -1082,6 +1111,8 @@ function setupDelegation() {
       }
       case 'settings-benefit-remove': removeBenefit(el.dataset.benefitId); break;
       case 'settings-add-benefit': addBenefit(); break;
+      case 'settings-add-itemtier': addItemTier(el.dataset.benefitId); break;
+      case 'settings-itemtier-remove': removeItemTier(el.dataset.benefitId, el.dataset.tierId); break;
       case 'settings-tier-mode': setTierCapMode(el.dataset.mode); break;
       case 'settings-tier-remove': removeTier(el.dataset.tierId); break;
       case 'settings-add-tier': addTier(); break;
@@ -1116,14 +1147,14 @@ function setupDelegation() {
         break;
       }
       case 'settings-benefit-keyword': updateBenefitField(el.dataset.benefitId, 'matchKeyword', el.value); break;
-      case 'settings-benefit-fixedcap-threshold': {
+      case 'settings-itemtier-threshold': {
         const n = parseInt(el.value.replace(/[^0-9]/g, ''), 10) || 0;
-        updateBenefitField(el.dataset.benefitId, 'fixedCapThreshold', n);
+        updateItemTierField(el.dataset.benefitId, el.dataset.tierId, 'threshold', n);
         break;
       }
-      case 'settings-benefit-fixedcap-amount': {
+      case 'settings-itemtier-cap': {
         const n = parseInt(el.value.replace(/[^0-9]/g, ''), 10) || 0;
-        updateBenefitField(el.dataset.benefitId, 'fixedCapAmount', n);
+        updateItemTierField(el.dataset.benefitId, el.dataset.tierId, 'cap', n);
         break;
       }
       case 'settings-tier-threshold': {

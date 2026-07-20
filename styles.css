@@ -377,11 +377,16 @@ td { padding: var(--row-pad, 14px) 16px; }
 .benefit-editor-header { display: grid; grid-template-columns: 1fr 100px 92px 1fr 128px 34px; gap: 10px; padding: 0 14px; margin-bottom: 2px; }
 .benefit-editor-header span { font-size: 11px; font-weight: 700; color: var(--muted-6); letter-spacing: 0.02em; }
 .benefit-editor-row { display: grid; grid-template-columns: 1fr 100px 92px 1fr 128px 34px; align-items: center; gap: 10px; padding: 12px 14px; background: var(--bg); border: 1px solid var(--border-faint); border-radius: 11px; }
-.benefit-fixedcap-row { grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; margin-top: 8px; padding-top: 10px; border-top: 1px dashed var(--border-faint); }
-.benefit-fixedcap-label { font-size: 12px; font-weight: 700; color: var(--ink-3); white-space: nowrap; }
-.benefit-fixedcap-hint { display: block; font-size: 10.5px; font-weight: 500; color: var(--muted-8); margin-top: 2px; }
+.benefit-itemtier-row { grid-column: 1 / -1; display: flex; align-items: flex-start; flex-wrap: wrap; gap: 10px; margin-top: 8px; padding-top: 10px; border-top: 1px dashed var(--border-faint); }
+.benefit-fixedcap-label { font-size: 12px; font-weight: 700; color: var(--ink-3); white-space: nowrap; padding-top: 6px; }
+.benefit-fixedcap-hint { display: block; font-size: 10.5px; font-weight: 500; color: var(--muted-8); margin-top: 2px; white-space: normal; }
+.benefit-itemtier-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.benefit-itemtier-entry { display: flex; align-items: center; gap: 6px; }
 .amount-field.small { padding: 0 10px; }
-.amount-field.small input { padding: 7px 0; font-size: 12.5px; width: 90px; }
+.amount-field.small input { padding: 7px 0; font-size: 12.5px; width: 80px; }
+.remove-btn.small { width: 26px; height: 26px; font-size: 13px; }
+.add-itemtier-btn { border: 1px dashed var(--border-dash); background: #fff; border-radius: 8px; padding: 7px 12px; font-size: 12px; font-weight: 700; color: var(--muted-5); cursor: pointer; white-space: nowrap; }
+.add-itemtier-btn:hover { border-color: var(--accent); color: var(--accent); }
 .benefit-input { border: 1px solid var(--border-chip); background: #fff; border-radius: 8px; padding: 9px 11px; font-size: 13px; outline: none; width: 100%; }
 .benefit-input:focus { border-color: var(--accent); }
 .benefit-input.place { font-weight: 700; color: var(--text); }
