@@ -285,7 +285,7 @@ button { font: inherit; }
 .tx-top-stats { display: flex; gap: 140px; margin-left: auto; }
 .tx-stat-box { display: flex; flex-direction: row; align-items: baseline; gap: 8px; }
 .tx-stat-label { font-size: 24px; color: var(--muted-8); font-weight: 600; white-space: nowrap; }
-.tx-stat-value { font-size: 32px; font-weight: 800; color: var(--ink-4); white-space: nowrap; }
+.tx-stat-value { font-size: 32px; font-weight: 800; color: var(--accent); white-space: nowrap; }
 
 .add-tx-panel { padding: 16px 18px; margin-bottom: 14px; }
 .add-tx-panel .panel-title { margin-bottom: 10px; }
