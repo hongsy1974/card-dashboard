@@ -186,7 +186,7 @@ function subscribeAllTx() {
   });
   state.cards.forEach(c => {
     if (txSubs[c.id]) return;
-    const q = query(collection(db, 'cards', c.id, 'transactions'), orderBy('date', 'asc'));
+    const q = query(collection(db, 'cards', c.id, 'transactions'), orderBy('date', 'desc'));
     txSubs[c.id] = onSnapshot(q, (snap) => {
       state.tx = { ...state.tx, [c.id]: snap.docs.map(d => ({ id: d.id, ...d.data() })) };
       state.txError = null;
