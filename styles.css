@@ -282,10 +282,10 @@ button { font: inherit; }
 }
 .tx-chip.selected { background: var(--accent); color: #fff; border-color: var(--accent); }
 .tx-chip-swatch { width: 22px; height: 14px; border-radius: 3px; flex: none; }
-.tx-top-stats { display: flex; gap: 28px; margin-left: auto; }
-.tx-stat-box { display: flex; flex-direction: column; align-items: flex-end; }
-.tx-stat-label { font-size: 12px; color: var(--muted-8); font-weight: 600; }
-.tx-stat-value { font-size: 16px; font-weight: 800; color: var(--ink-4); margin-top: 2px; }
+.tx-top-stats { display: flex; gap: 140px; margin-left: auto; }
+.tx-stat-box { display: flex; flex-direction: row; align-items: baseline; gap: 8px; }
+.tx-stat-label { font-size: 24px; color: var(--muted-8); font-weight: 600; white-space: nowrap; }
+.tx-stat-value { font-size: 32px; font-weight: 800; color: var(--ink-4); white-space: nowrap; }
 
 .add-tx-panel { padding: 16px 18px; margin-bottom: 14px; }
 .add-tx-panel .panel-title { margin-bottom: 10px; }
