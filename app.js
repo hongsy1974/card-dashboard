@@ -19,6 +19,8 @@ const monthsCol = collection(db, 'months');
 
 /* ===================== constants ===================== */
 const ACCENT = '#F26722';
+const YELLOW = '#E0A21A';
+const GREEN = '#2E9E4F';
 const SHOW_CATEGORY = true;
 const ROW_PAD = '15px';
 
@@ -69,8 +71,8 @@ function computeMonthOptions() {
 
 const BADGE = {
   under: { label: '실적 미달', bg: ACCENT, fg: '#fff', border: ACCENT },
-  near: { label: '기준 근접', bg: '#FEF1E9', fg: '#C2601F', border: '#F6D2BC' },
-  achieved: { label: '달성 완료', bg: '#F2F1EE', fg: '#66655F', border: '#E6E5E1' },
+  near: { label: '기준 근접', bg: '#FDF3DD', fg: '#95700D', border: '#F1DA9F' },
+  achieved: { label: '달성 완료', bg: '#E8F5EC', fg: '#227A3D', border: '#BDE3C7' },
 };
 
 const COL_MAP = [
@@ -470,12 +472,12 @@ function computeDashboard() {
       spendFmt: won(c.spend), benefitFmt: c.benefitAmt > 0 ? won(c.benefitAmt) : '0원',
       benefitColor: c.benefitAmt > 0 ? ACCENT : '#B4B4AF',
       barPct: Math.min(100, c.pct), pctText: c.pct + '%',
-      barColor: c.st === 'achieved' ? '#C9C8C3' : ACCENT,
+      barColor: c.st === 'achieved' ? GREEN : (c.st === 'near' ? YELLOW : ACCENT),
       statusLabel: b.label, badgeBg: b.bg, badgeFg: b.fg, badgeBorder: b.border,
-      stripColor: c.st === 'under' ? ACCENT : 'transparent',
-      cardBorder: c.st === 'under' ? '#F3D3BF' : '#ECEBE8',
+      stripColor: c.st === 'achieved' ? GREEN : (c.st === 'near' ? YELLOW : ACCENT),
+      cardBorder: c.st === 'achieved' ? '#BDE3C7' : (c.st === 'near' ? '#F1DA9F' : '#F3D3BF'),
       remainText: c.st === 'achieved' ? ('기준 초과 +' + won(c.recognized - c.threshold)) : ('기준까지 ' + won(remain) + ' 남음'),
-      remainColor: c.st === 'under' ? ACCENT : (c.st === 'near' ? '#C2601F' : '#7A9A82'),
+      remainColor: c.st === 'achieved' ? GREEN : (c.st === 'near' ? '#95700D' : ACCENT),
       hasBenefits: c.gotBenefits.length > 0,
       benefitList: c.gotBenefits,
       totalCapNote: c.totalCapNote,
@@ -641,8 +643,8 @@ function renderDashboardScreen() {
       '<span class="section-head-hint">· 기준 미달 카드가 상단에 표시됩니다</span>' +
       '<div class="legend">' +
         '<span class="legend-item"><span class="legend-dot" style="background:' + ACCENT + ';"></span>실적 미달</span>' +
-        '<span class="legend-item"><span class="legend-dot" style="background:#F6C6A8;"></span>기준 근접</span>' +
-        '<span class="legend-item"><span class="legend-dot" style="background:#D9D9D5;"></span>달성 완료</span>' +
+        '<span class="legend-item"><span class="legend-dot" style="background:' + YELLOW + ';"></span>기준 근접</span>' +
+        '<span class="legend-item"><span class="legend-dot" style="background:' + GREEN + ';"></span>달성 완료</span>' +
       '</div>' +
     '</div>';
 
