@@ -489,8 +489,28 @@ button, input, select { font-size: 100%; }
   .search-box { min-width: 0; flex-basis: 100%; }
   .tx-count-label { margin-left: 0; flex-basis: 100%; }
 
-  .table-wrap { overflow: auto; }
-  table { min-width: 760px; }
+  .table-wrap { overflow: visible; }
+  table { width: 100%; }
+  thead { display: none; }
+  tbody tr {
+    display: grid; grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-template-areas: "date date merchant merchant amount amount" "category method toggle benefit source delete";
+    align-items: center; column-gap: 6px; row-gap: 6px; padding: 12px 12px;
+  }
+  td { display: block; padding: 0; min-width: 0; }
+  .td-date { grid-area: date; font-size: 11px; white-space: normal; }
+  .td-merchant { grid-area: merchant; font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .td-amount { grid-area: amount; font-size: 12.5px; }
+  .td-category { grid-area: category; }
+  .td-category .category-pill { font-size: 10px; padding: 2px 7px; }
+  .td-method { grid-area: method; font-size: 11px; white-space: normal; }
+  .td-toggle { grid-area: toggle; text-align: left; }
+  .td-benefit { grid-area: benefit; min-width: 0; }
+  .td-benefit .benefit-select { width: 100%; max-width: none; font-size: 11px; padding: 5px 6px; }
+  .td-source { grid-area: source; text-align: left; }
+  .td-source .source-badge { font-size: 9.5px; padding: 3px 6px; }
+  .td-delete { grid-area: delete; justify-self: end; width: auto; }
+  .td-delete .remove-btn { width: 24px; height: 24px; font-size: 12px; }
 
   .settings-grid { grid-template-columns: 1fr; }
   .settings-sidebar { position: static; }

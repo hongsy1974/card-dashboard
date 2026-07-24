@@ -879,7 +879,7 @@ function renderTxScreen() {
     const srcColor = !r.classified ? ACCENT : (r.source === 'manual' ? '#3B62C4' : '#8B8B86');
     const trackBg = r.included ? ACCENT : '#D9D8D4';
     const knobX = r.included ? 'translateX(18px)' : 'translateX(0)';
-    const catCell = SHOW_CATEGORY ? '<td><span class="category-pill">' + esc(r.category) + '</span></td>' : '';
+    const catCell = SHOW_CATEGORY ? '<td class="td-category"><span class="category-pill">' + esc(r.category) + '</span></td>' : '';
 
     return (
       '<tr>' +
@@ -889,7 +889,7 @@ function renderTxScreen() {
         '<td class="td-amount">' + won(r.amount) + '</td>' +
         '<td class="td-method">' + esc(r.method) + '</td>' +
         '<td class="td-toggle"><button class="toggle-switch" style="background:' + trackBg + ';" data-action="tx-row-toggle" data-row-id="' + r.id + '"><span class="toggle-knob" style="transform:' + knobX + ';"></span></button></td>' +
-        '<td><select class="benefit-select" style="background:' + selBg + ';color:' + selColor + ';border-color:' + selBorder + ';font-weight:' + selWeight + ';" data-action="tx-row-benefit" data-row-id="' + r.id + '">' + benefitOptsHtml + '</select></td>' +
+        '<td class="td-benefit"><select class="benefit-select" style="background:' + selBg + ';color:' + selColor + ';border-color:' + selBorder + ';font-weight:' + selWeight + ';" data-action="tx-row-benefit" data-row-id="' + r.id + '">' + benefitOptsHtml + '</select></td>' +
         '<td class="td-source"><span class="source-badge" style="background:' + srcBg + ';color:' + srcColor + ';">' + srcLabel + '</span></td>' +
         '<td class="td-delete"><button class="remove-btn" data-action="tx-row-delete" data-row-id="' + r.id + '">×</button></td>' +
       '</tr>'
