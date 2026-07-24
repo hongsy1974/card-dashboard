@@ -522,6 +522,7 @@ function renderShell() {
         renderTopbar() +
         '<div class="content">' + renderScreen() + '</div>' +
       '</main>' +
+      renderBottomNav() +
     '</div>'
   );
 }
@@ -574,6 +575,18 @@ function renderSidebar() {
       '</div>' +
     '</aside>'
   );
+}
+
+function renderBottomNav() {
+  const itemsHtml = NAV_DEFS.map(n => {
+    const active = state.screen === n.key;
+    return (
+      '<button class="bottom-nav-btn' + (active ? ' active' : '') + '" data-action="nav" data-screen="' + n.key + '">' +
+        '<span class="bottom-nav-icon">' + n.icon + '</span><span class="bottom-nav-label">' + n.label + '</span>' +
+      '</button>'
+    );
+  }).join('');
+  return '<nav class="bottom-nav">' + itemsHtml + '</nav>';
 }
 
 function renderTopbar() {
